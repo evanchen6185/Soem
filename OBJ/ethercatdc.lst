@@ -1,0 +1,2402 @@
+L 1 "..\ETHERCAT\ethercatdc.c"
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercatdc.c
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file
+N * \brief
+N * Distributed Clock EtherCAT functions. 
+N *
+N */
+N#include "ethercattype.h"
+L 1 "..\ETHERCAT\ethercattype.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercattype.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file
+N * \brief   
+N * General typedefs and defines for EtherCAT.
+N *
+N * Defines that could need optimalisation for specific applications
+N * are the EC_TIMEOUTxxx. Assumptions for the standard settings are a
+N * standard linux PC or laptop and a wired connection to maximal 100 slaves.
+N * For use with wireless connections or lots of slaves the timouts need
+N * increasing. For fast systems running Xenomai and RT-net or alike the
+N * timeouts need to be shorter.   
+N */
+N
+N#ifndef _EC_TYPE_H
+N#define _EC_TYPE_H
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N/** Define Little or Big endian target */
+N#define EC_BIG_ENDIAN
+N
+N/** define EC_VER1 if version 1 default context and functions are needed
+N * comment if application uses only ecx_ functions and own context */
+N#define EC_VER1
+N
+N#include "osal.h"
+L 1 "..\ETHERCAT\osal.h" 1
+N/******************************************************************************
+N *                *          ***                    ***
+N *              ***          ***                    ***
+N * ***  ****  **********     ***        *****       ***  ****          *****
+N * *********  **********     ***      *********     ************     *********
+N * ****         ***          ***              ***   ***       ****   ***
+N * ***          ***  ******  ***      ***********   ***        ****   *****
+N * ***          ***  ******  ***    *************   ***        ****      *****
+N * ***          ****         ****   ***       ***   ***       ****          ***
+N * ***           *******      ***** **************  *************    *********
+N * ***             *****        ***   *******   **  **  ******         *****
+N *                           t h e  r e a l t i m e  t a r g e t  e x p e r t s
+N *
+N * http://www.rt-labs.com
+N * Copyright (C) 2009. rt-labs AB, Sweden. All rights reserved.
+N *------------------------------------------------------------------------------
+N * $Id: osal.h 473 2013-04-08 11:43:02Z rtlaka $
+N *------------------------------------------------------------------------------
+N */
+N
+N#ifndef _osal_
+N#define _osal_
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N#include <stdint.h>
+L 1 "C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h" 1
+N/* Copyright (C) ARM Ltd., 1999,2014 */
+N/* All rights reserved */
+N
+N/*
+N * RCS $Revision$
+N * Checkin $Date$
+N * Revising $Author: agrant $
+N */
+N
+N#ifndef __stdint_h
+N#define __stdint_h
+N#define __ARMCLIB_VERSION 5060034
+N
+N  #ifdef __INT64_TYPE__
+S    /* armclang predefines '__INT64_TYPE__' and '__INT64_C_SUFFIX__' */
+S    #define __INT64 __INT64_TYPE__
+N  #else
+N    /* armcc has builtin '__int64' which can be used in --strict mode */
+N    #define __INT64 __int64
+N    #define __INT64_C_SUFFIX__ ll
+N  #endif
+N  #define __PASTE2(x, y) x ## y
+N  #define __PASTE(x, y) __PASTE2(x, y)
+N  #define __INT64_C(x)  __ESCAPE__(__PASTE(x, __INT64_C_SUFFIX__))
+N  #define __UINT64_C(x)  __ESCAPE__(__PASTE(x ## u, __INT64_C_SUFFIX__))
+N  #if defined(__clang__) || (defined(__ARMCC_VERSION) && !defined(__STRICT_ANSI__))
+X  #if 0L || (1L && !0L)
+N    /* armclang and non-strict armcc allow 'long long' in system headers */
+N    #define __LONGLONG long long
+N  #else
+S    /* strict armcc has '__int64' */
+S    #define __LONGLONG __int64
+N  #endif
+N
+N  #ifndef __STDINT_DECLS
+N  #define __STDINT_DECLS
+N
+N    #undef __CLIBNS
+N
+N    #ifdef __cplusplus
+S      namespace std {
+S          #define __CLIBNS std::
+S          extern "C" {
+N    #else
+N      #define __CLIBNS
+N    #endif  /* __cplusplus */
+N
+N
+N/*
+N * 'signed' is redundant below, except for 'signed char' and if
+N * the typedef is used to declare a bitfield.
+N */
+N
+N    /* 7.18.1.1 */
+N
+N    /* exact-width signed integer types */
+Ntypedef   signed          char int8_t;
+Ntypedef   signed short     int int16_t;
+Ntypedef   signed           int int32_t;
+Ntypedef   signed       __INT64 int64_t;
+Xtypedef   signed       __int64 int64_t;
+N
+N    /* exact-width unsigned integer types */
+Ntypedef unsigned          char uint8_t;
+Ntypedef unsigned short     int uint16_t;
+Ntypedef unsigned           int uint32_t;
+Ntypedef unsigned       __INT64 uint64_t;
+Xtypedef unsigned       __int64 uint64_t;
+N
+N    /* 7.18.1.2 */
+N
+N    /* smallest type of at least n bits */
+N    /* minimum-width signed integer types */
+Ntypedef   signed          char int_least8_t;
+Ntypedef   signed short     int int_least16_t;
+Ntypedef   signed           int int_least32_t;
+Ntypedef   signed       __INT64 int_least64_t;
+Xtypedef   signed       __int64 int_least64_t;
+N
+N    /* minimum-width unsigned integer types */
+Ntypedef unsigned          char uint_least8_t;
+Ntypedef unsigned short     int uint_least16_t;
+Ntypedef unsigned           int uint_least32_t;
+Ntypedef unsigned       __INT64 uint_least64_t;
+Xtypedef unsigned       __int64 uint_least64_t;
+N
+N    /* 7.18.1.3 */
+N
+N    /* fastest minimum-width signed integer types */
+Ntypedef   signed           int int_fast8_t;
+Ntypedef   signed           int int_fast16_t;
+Ntypedef   signed           int int_fast32_t;
+Ntypedef   signed       __INT64 int_fast64_t;
+Xtypedef   signed       __int64 int_fast64_t;
+N
+N    /* fastest minimum-width unsigned integer types */
+Ntypedef unsigned           int uint_fast8_t;
+Ntypedef unsigned           int uint_fast16_t;
+Ntypedef unsigned           int uint_fast32_t;
+Ntypedef unsigned       __INT64 uint_fast64_t;
+Xtypedef unsigned       __int64 uint_fast64_t;
+N
+N    /* 7.18.1.4 integer types capable of holding object pointers */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+Stypedef   signed       __INT64 intptr_t;
+Stypedef unsigned       __INT64 uintptr_t;
+N#else
+Ntypedef   signed           int intptr_t;
+Ntypedef unsigned           int uintptr_t;
+N#endif
+N
+N    /* 7.18.1.5 greatest-width integer types */
+Ntypedef   signed     __LONGLONG intmax_t;
+Xtypedef   signed     long long intmax_t;
+Ntypedef unsigned     __LONGLONG uintmax_t;
+Xtypedef unsigned     long long uintmax_t;
+N
+N
+N#if !defined(__cplusplus) || defined(__STDC_LIMIT_MACROS)
+X#if !0L || 0L
+N
+N    /* 7.18.2.1 */
+N
+N    /* minimum values of exact-width signed integer types */
+N#define INT8_MIN                   -128
+N#define INT16_MIN                -32768
+N#define INT32_MIN          (~0x7fffffff)   /* -2147483648 is unsigned */
+N#define INT64_MIN  __INT64_C(~0x7fffffffffffffff) /* -9223372036854775808 is unsigned */
+N
+N    /* maximum values of exact-width signed integer types */
+N#define INT8_MAX                    127
+N#define INT16_MAX                 32767
+N#define INT32_MAX            2147483647
+N#define INT64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of exact-width unsigned integer types */
+N#define UINT8_MAX                   255
+N#define UINT16_MAX                65535
+N#define UINT32_MAX           4294967295u
+N#define UINT64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.2 */
+N
+N    /* minimum values of minimum-width signed integer types */
+N#define INT_LEAST8_MIN                   -128
+N#define INT_LEAST16_MIN                -32768
+N#define INT_LEAST32_MIN          (~0x7fffffff)
+N#define INT_LEAST64_MIN  __INT64_C(~0x7fffffffffffffff)
+N
+N    /* maximum values of minimum-width signed integer types */
+N#define INT_LEAST8_MAX                    127
+N#define INT_LEAST16_MAX                 32767
+N#define INT_LEAST32_MAX            2147483647
+N#define INT_LEAST64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of minimum-width unsigned integer types */
+N#define UINT_LEAST8_MAX                   255
+N#define UINT_LEAST16_MAX                65535
+N#define UINT_LEAST32_MAX           4294967295u
+N#define UINT_LEAST64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.3 */
+N
+N    /* minimum values of fastest minimum-width signed integer types */
+N#define INT_FAST8_MIN           (~0x7fffffff)
+N#define INT_FAST16_MIN          (~0x7fffffff)
+N#define INT_FAST32_MIN          (~0x7fffffff)
+N#define INT_FAST64_MIN  __INT64_C(~0x7fffffffffffffff)
+N
+N    /* maximum values of fastest minimum-width signed integer types */
+N#define INT_FAST8_MAX             2147483647
+N#define INT_FAST16_MAX            2147483647
+N#define INT_FAST32_MAX            2147483647
+N#define INT_FAST64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of fastest minimum-width unsigned integer types */
+N#define UINT_FAST8_MAX            4294967295u
+N#define UINT_FAST16_MAX           4294967295u
+N#define UINT_FAST32_MAX           4294967295u
+N#define UINT_FAST64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.4 */
+N
+N    /* minimum value of pointer-holding signed integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define INTPTR_MIN INT64_MIN
+N#else
+N#define INTPTR_MIN INT32_MIN
+N#endif
+N
+N    /* maximum value of pointer-holding signed integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define INTPTR_MAX INT64_MAX
+N#else
+N#define INTPTR_MAX INT32_MAX
+N#endif
+N
+N    /* maximum value of pointer-holding unsigned integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define UINTPTR_MAX UINT64_MAX
+N#else
+N#define UINTPTR_MAX UINT32_MAX
+N#endif
+N
+N    /* 7.18.2.5 */
+N
+N    /* minimum value of greatest-width signed integer type */
+N#define INTMAX_MIN  __ESCAPE__(~0x7fffffffffffffffll)
+N
+N    /* maximum value of greatest-width signed integer type */
+N#define INTMAX_MAX  __ESCAPE__(9223372036854775807ll)
+N
+N    /* maximum value of greatest-width unsigned integer type */
+N#define UINTMAX_MAX __ESCAPE__(18446744073709551615ull)
+N
+N    /* 7.18.3 */
+N
+N    /* limits of ptrdiff_t */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define PTRDIFF_MIN INT64_MIN
+S#define PTRDIFF_MAX INT64_MAX
+N#else
+N#define PTRDIFF_MIN INT32_MIN
+N#define PTRDIFF_MAX INT32_MAX
+N#endif
+N
+N    /* limits of sig_atomic_t */
+N#define SIG_ATOMIC_MIN (~0x7fffffff)
+N#define SIG_ATOMIC_MAX   2147483647
+N
+N    /* limit of size_t */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define SIZE_MAX UINT64_MAX
+N#else
+N#define SIZE_MAX UINT32_MAX
+N#endif
+N
+N    /* limits of wchar_t */
+N    /* NB we have to undef and redef because they're defined in both
+N     * stdint.h and wchar.h */
+N#undef WCHAR_MIN
+N#undef WCHAR_MAX
+N
+N#if defined(__WCHAR32) || (defined(__ARM_SIZEOF_WCHAR_T) && __ARM_SIZEOF_WCHAR_T == 4)
+X#if 0L || (0L && __ARM_SIZEOF_WCHAR_T == 4)
+S  #define WCHAR_MIN   0
+S  #define WCHAR_MAX   0xffffffffU
+N#else
+N  #define WCHAR_MIN   0
+N  #define WCHAR_MAX   65535
+N#endif
+N
+N    /* limits of wint_t */
+N#define WINT_MIN (~0x7fffffff)
+N#define WINT_MAX 2147483647
+N
+N#endif /* __STDC_LIMIT_MACROS */
+N
+N#if !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS)
+X#if !0L || 0L
+N
+N    /* 7.18.4.1 macros for minimum-width integer constants */
+N#define INT8_C(x)   (x)
+N#define INT16_C(x)  (x)
+N#define INT32_C(x)  (x)
+N#define INT64_C(x)  __INT64_C(x)
+N
+N#define UINT8_C(x)  (x ## u)
+N#define UINT16_C(x) (x ## u)
+N#define UINT32_C(x) (x ## u)
+N#define UINT64_C(x) __UINT64_C(x)
+N
+N    /* 7.18.4.2 macros for greatest-width integer constants */
+N#define INTMAX_C(x)  __ESCAPE__(x ## ll)
+N#define UINTMAX_C(x) __ESCAPE__(x ## ull)
+N
+N#endif /* __STDC_CONSTANT_MACROS */
+N
+N    #ifdef __cplusplus
+S         }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif /* __cplusplus */
+N  #endif /* __STDINT_DECLS */
+N
+N  #ifdef __cplusplus
+S    #ifndef __STDINT_NO_EXPORTS
+S      using ::std::int8_t;
+S      using ::std::int16_t;
+S      using ::std::int32_t;
+S      using ::std::int64_t;
+S      using ::std::uint8_t;
+S      using ::std::uint16_t;
+S      using ::std::uint32_t;
+S      using ::std::uint64_t;
+S      using ::std::int_least8_t;
+S      using ::std::int_least16_t;
+S      using ::std::int_least32_t;
+S      using ::std::int_least64_t;
+S      using ::std::uint_least8_t;
+S      using ::std::uint_least16_t;
+S      using ::std::uint_least32_t;
+S      using ::std::uint_least64_t;
+S      using ::std::int_fast8_t;
+S      using ::std::int_fast16_t;
+S      using ::std::int_fast32_t;
+S      using ::std::int_fast64_t;
+S      using ::std::uint_fast8_t;
+S      using ::std::uint_fast16_t;
+S      using ::std::uint_fast32_t;
+S      using ::std::uint_fast64_t;
+S      using ::std::intptr_t;
+S      using ::std::uintptr_t;
+S      using ::std::intmax_t;
+S      using ::std::uintmax_t;
+S    #endif
+N  #endif /* __cplusplus */
+N
+N#undef __INT64
+N#undef __LONGLONG
+N
+N#endif /* __stdint_h */
+N
+N/* end of stdint.h */
+L 30 "..\ETHERCAT\osal.h" 2
+N
+N/* General types */
+Ntypedef uint8_t             boolean;
+N#define TRUE                1
+N#define FALSE               0
+N		
+Ntypedef int8_t              int8;
+Ntypedef int16_t             int16;
+Ntypedef int32_t             int32;
+Ntypedef uint8_t             uint8;
+Ntypedef uint16_t            uint16;
+Ntypedef uint32_t            uint32;
+Ntypedef int64_t             int64;
+Ntypedef uint64_t            uint64;
+Ntypedef float               float32;
+Ntypedef double              float64;
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 70 "..\ETHERCAT\ethercattype.h" 2
+N	
+N/** return value general error */
+N#define EC_ERROR           -3
+N/** return value no frame returned */
+N#define EC_NOFRAME         -1
+N/** return value unknown frame received */
+N#define EC_OTHERFRAME      -2
+N/** maximum EtherCAT frame length in bytes */
+N#define EC_MAXECATFRAME    1518	
+N/** maximum EtherCAT LRW frame length in bytes */
+N/* MTU - Ethernet header - length - datagram header - WCK - FCS */
+N#define EC_MAXLRWDATA      (EC_MAXECATFRAME - 14 - 2 - 10 - 2 - 4)
+N/** size of DC datagram used in first LRW frame */
+N#define EC_FIRSTDCDATAGRAM 20
+N/** standard frame buffer size in bytes */
+N#define EC_BUFSIZE         EC_MAXECATFRAME
+N/** datagram type EtherCAT */
+N#define EC_ECATTYPE        0x1000
+N/** number of frame buffers per channel (tx, rx1 rx2) */
+N#define EC_MAXBUF          16
+N//#define EC_MAXBUF          4
+N/** timeout value in us for tx frame to return to rx */
+N#define EC_TIMEOUTRET      2000
+N/** timeout value in us for safe data transfer, max. triple retry */
+N#define EC_TIMEOUTRET3     (EC_TIMEOUTRET * 3)
+N/** timeout value in us for return "safe" variant (f.e. wireless) */
+N#define EC_TIMEOUTSAFE     20000
+N/** timeout value in us for EEPROM access */
+N#define EC_TIMEOUTEEP      20000
+N/** timeout value in us for tx mailbox cycle */
+N#define EC_TIMEOUTTXM      20000
+N/** timeout value in us for rx mailbox cycle */
+N#define EC_TIMEOUTRXM      700000
+N/** timeout value in us for check statechange */
+N#define EC_TIMEOUTSTATE    2000000
+N/** size of EEPROM bitmap cache */
+N#define EC_MAXEEPBITMAP    128
+N/** size of EEPROM cache buffer */
+N#define EC_MAXEEPBUF       EC_MAXEEPBITMAP << 5
+N/** default number of retries if wkc <= 0 */
+N#define EC_DEFAULTRETRIES  3
+N
+N/** definition for frame buffers */
+Ntypedef uint8 ec_bufT[EC_BUFSIZE];
+Xtypedef uint8 ec_bufT[1518];
+N
+N///** ethernet header definition */
+Ntypedef struct
+N{
+N   /** destination MAC */
+N   uint16  da0,da1,da2;
+N   /** source MAC */
+N   uint16  sa0,sa1,sa2;
+N   /** ethernet type */
+N   uint16  etype;
+N} ec_etherheadert;
+N
+N/** ethernet header size */
+N#define ETH_HEADERSIZE      sizeof(ec_etherheadert)
+N
+N/** EtherCAT datagram header definition */
+Ntypedef struct
+N{
+N   /** length of EtherCAT datagram */
+N   uint16  elength;
+N   /** EtherCAT command, see ec_cmdtype */
+N   uint8   command;
+N   /** index, used in SOEM for Tx to Rx recombination */
+N   uint8   index;
+N   /** ADP */
+N   uint16  ADP;
+N   /** ADO */
+N   uint16  ADO;
+N   /** length of data portion in datagram */
+N   uint16  dlength;
+N   /** interrupt, currently unused */
+N   uint16  irpt;
+N} ec_comt;
+N
+N/** EtherCAT header size */
+N#define EC_HEADERSIZE       sizeof(ec_comt)
+N/** size of ec_comt.elength item in EtherCAT header */
+N#define EC_ELENGTHSIZE      sizeof(uint16)
+N/** offset position of command in EtherCAT header */
+N#define EC_CMDOFFSET        EC_ELENGTHSIZE
+N/** size of workcounter item in EtherCAT datagram */
+N#define EC_WKCSIZE          sizeof(uint16)
+N/** definition of datagram follows bit in ec_comt.dlength */
+N#define EC_DATAGRAMFOLLOWS  (1 << 15)
+N
+N/** Possible error codes returned. */
+Ntypedef enum
+N{
+N   /** No error */
+N   EC_ERR_OK         = 0,
+N   /** Library already initialized. */
+N   EC_ERR_ALREADY_INITIALIZED,
+N   /** Library not initialized. */
+N   EC_ERR_NOT_INITIALIZED,
+N   /** Timeout occured during execution of the function. */
+N   EC_ERR_TIMEOUT,
+N   /** No slaves were found. */
+N   EC_ERR_NO_SLAVES,
+N   /** Function failed. */
+N   EC_ERR_NOK
+N} ec_err;
+N
+N/** Possible EtherCAT slave states */
+Ntypedef enum
+N{
+N   /** Init state*/
+N   EC_STATE_INIT           = 0x01,
+N   /** Pre-operational. */
+N   EC_STATE_PRE_OP         = 0x02,
+N   /** Boot state*/
+N   EC_STATE_BOOT            = 0x03,
+N   /** Safe-operational. */
+N   EC_STATE_SAFE_OP        = 0x04,
+N   /** Operational */
+N   EC_STATE_OPERATIONAL    = 0x08,
+N   /** Error or ACK error */
+N   EC_STATE_ACK            = 0x10,
+N   EC_STATE_ERROR          = 0x10
+N} ec_state;
+N
+N/** Possible buffer states */
+Ntypedef enum
+N{
+N   /** Empty */
+N   EC_BUF_EMPTY        = 0x00,
+N   /** Allocated, but not filled */
+N   EC_BUF_ALLOC        = 0x01,
+N   /** Transmitted */
+N   EC_BUF_TX           = 0x02,
+N   /** Received, but not consumed */
+N   EC_BUF_RCVD         = 0x03,
+N   /** Cycle completed */
+N   EC_BUF_COMPLETE     = 0x04
+N} ec_bufstate;
+N
+N/** Ethercat data types */
+Ntypedef enum
+N{
+N   ECT_BOOLEAN         = 0x0001,
+N   ECT_INTEGER8        = 0x0002,
+N   ECT_INTEGER16       = 0x0003,
+N   ECT_INTEGER32       = 0x0004,
+N   ECT_UNSIGNED8       = 0x0005,
+N   ECT_UNSIGNED16      = 0x0006,
+N   ECT_UNSIGNED32      = 0x0007,
+N   ECT_REAL32          = 0x0008,
+N   ECT_VISIBLE_STRING  = 0x0009,
+N   ECT_OCTET_STRING    = 0x000A,
+N   ECT_UNICODE_STRING  = 0x000B,
+N   ECT_TIME_OF_DAY     = 0x000C,
+N   ECT_TIME_DIFFERENCE = 0x000D,
+N   ECT_DOMAIN          = 0x000F,
+N   ECT_INTEGER24       = 0x0010,
+N   ECT_REAL64          = 0x0011,
+N   ECT_INTEGER64       = 0x0015,
+N   ECT_UNSIGNED24      = 0x0016,
+N   ECT_UNSIGNED64      = 0x001B,
+N   ECT_BIT1            = 0x0030,
+N   ECT_BIT2            = 0x0031,
+N   ECT_BIT3            = 0x0032,
+N   ECT_BIT4            = 0x0033,
+N   ECT_BIT5            = 0x0034,
+N   ECT_BIT6            = 0x0035,
+N   ECT_BIT7            = 0x0036,
+N   ECT_BIT8            = 0x0037
+N} ec_datatype;
+N
+N/** Ethercat command types */
+Ntypedef enum 
+N{
+N   /** No operation */
+N   EC_CMD_NOP          = 0x00,
+N   /** Auto Increment Read */
+N   EC_CMD_APRD,
+N   /** Auto Increment Write */
+N   EC_CMD_APWR,
+N   /** Auto Increment Read Write */
+N   EC_CMD_APRW,
+N   /** Configured Address Read */
+N   EC_CMD_FPRD,
+N   /** Configured Address Write */
+N   EC_CMD_FPWR,
+N   /** Configured Address Read Write */
+N   EC_CMD_FPRW,
+N   /** Broadcast Read */
+N   EC_CMD_BRD,
+N   /** Broaddcast Write */
+N   EC_CMD_BWR,
+N   /** Broadcast Read Write */
+N   EC_CMD_BRW,
+N   /** Logical Memory Read */
+N   EC_CMD_LRD,
+N   /** Logical Memory Write */
+N   EC_CMD_LWR,
+N   /** Logical Memory Read Write */
+N   EC_CMD_LRW,
+N   /** Auto Increment Read Mulitple Write */
+N   EC_CMD_ARMW,
+N   /** Configured Read Mulitple Write */
+N   EC_CMD_FRMW
+N   /** Reserved */
+N} ec_cmdtype;
+N
+N/** Ethercat EEprom command types */
+Ntypedef enum 
+N{
+N   /** No operation */
+N   EC_ECMD_NOP         = 0x0000,
+N   /** Read */
+N   EC_ECMD_READ        = 0x0100,
+N   /** Write */
+N   EC_ECMD_WRITE       = 0x0201,
+N   /** Reload */
+N   EC_ECMD_RELOAD      = 0x0300
+N} ec_ecmdtype;
+N
+N/** EEprom state machine read size */
+N#define EC_ESTAT_R64    0x0040
+N/** EEprom state machine busy flag */
+N#define EC_ESTAT_BUSY   0x8000
+N/** EEprom state machine error flag mask */
+N#define EC_ESTAT_EMASK  0x7800
+N/** EEprom state machine error acknowledge */
+N#define EC_ESTAT_NACK   0x2000
+N
+N/* Ethercat SSI (Slave Information Interface) */
+N
+N/** Start address SII sections in Eeprom */
+N#define ECT_SII_START   0x0040
+N
+Nenum
+N{
+N   /** SII category strings */
+N   ECT_SII_STRING      = 10,
+N   /** SII category general */
+N   ECT_SII_GENERAL     = 30,
+N   /** SII category FMMU */
+N   ECT_SII_FMMU        = 40,
+N   /** SII category SM */
+N   ECT_SII_SM          = 41,
+N   /** SII category PDO */
+N   ECT_SII_PDO         = 50
+N};
+N
+N/** Item offsets in SII general section */
+Nenum
+N{
+N   ECT_SII_MANUF       = 0x0008,
+N   ECT_SII_ID          = 0x000a,
+N   ECT_SII_REV         = 0x000c,
+N   ECT_SII_BOOTRXMBX   = 0x0014,
+N   ECT_SII_BOOTTXMBX   = 0x0016,
+N   ECT_SII_MBXSIZE     = 0x0019,
+N   ECT_SII_TXMBXADR    = 0x001a,
+N   ECT_SII_RXMBXADR    = 0x0018,
+N   ECT_SII_MBXPROTO    = 0x001c
+N};
+N
+N/** Mailbox types definitions */
+Nenum
+N{
+N   /** Error mailbox type */
+N   ECT_MBXT_ERR        = 0x00,
+N   /** ADS over EtherCAT mailbox type */
+N   ECT_MBXT_AOE,
+N   /** Ethernet over EtherCAT mailbox type */
+N   ECT_MBXT_EOE,
+N   /** CANopen over EtherCAT mailbox type */
+N   ECT_MBXT_COE,
+N   /** File over EtherCAT mailbox type */
+N   ECT_MBXT_FOE,
+N   /** Servo over EtherCAT mailbox type */
+N   ECT_MBXT_SOE,
+N   /** Vendor over EtherCAT mailbox type */
+N   ECT_MBXT_VOE        = 0x0f
+N};
+N
+N/** CoE mailbox types */
+Nenum
+N{
+N   ECT_COES_EMERGENCY  = 0x01,
+N   ECT_COES_SDOREQ,
+N   ECT_COES_SDORES,
+N   ECT_COES_TXPDO,
+N   ECT_COES_RXPDO,
+N   ECT_COES_TXPDO_RR,
+N   ECT_COES_RXPDO_RR,
+N   ECT_COES_SDOINFO
+N};
+N
+N/** CoE SDO commands */
+Nenum
+N{
+N   ECT_SDO_DOWN_INIT    = 0x21,
+N   ECT_SDO_DOWN_EXP     = 0x23,
+N   ECT_SDO_DOWN_INIT_CA = 0x31,
+N   ECT_SDO_UP_REQ       = 0x40,
+N   ECT_SDO_UP_REQ_CA    = 0x50,
+N   ECT_SDO_SEG_UP_REQ   = 0x60,
+N   ECT_SDO_ABORT        = 0x80
+N};
+N
+N/** CoE Object Description commands */
+Nenum
+N{
+N   ECT_GET_ODLIST_REQ  = 0x01,
+N   ECT_GET_ODLIST_RES  = 0x02,
+N   ECT_GET_OD_REQ      = 0x03,
+N   ECT_GET_OD_RES      = 0x04,
+N   ECT_GET_OE_REQ      = 0x05,
+N   ECT_GET_OE_RES      = 0x06,
+N   ECT_SDOINFO_ERROR   = 0x07
+N};
+N
+N/** FoE opcodes */
+Nenum
+N{
+N   ECT_FOE_READ        = 0x01,
+N   ECT_FOE_WRITE,
+N   ECT_FOE_DATA,
+N   ECT_FOE_ACK,
+N   ECT_FOE_ERROR,
+N   ECT_FOE_BUSY
+N};
+N
+N/** SoE opcodes */
+Nenum
+N{
+N   ECT_SOE_READREQ     = 0x01,
+N   ECT_SOE_READRES,
+N   ECT_SOE_WRITEREQ,
+N   ECT_SOE_WRITERES,
+N   ECT_SOE_NOTIFICATION,
+N   ECT_SOE_EMERGENCY
+N};
+N
+N/** Ethercat registers */
+Nenum 
+N{
+N   ECT_REG_TYPE        = 0x0000,
+N   ECT_REG_PORTDES     = 0x0007,
+N   ECT_REG_ESCSUP      = 0x0008,
+N   ECT_REG_STADR       = 0x0010,
+N   ECT_REG_ALIAS       = 0x0012,
+N   ECT_REG_DLCTL       = 0x0100,
+N   ECT_REG_DLPORT      = 0x0101,
+N   ECT_REG_DLALIAS     = 0x0103,
+N   ECT_REG_DLSTAT      = 0x0110,
+N   ECT_REG_ALCTL       = 0x0120,
+N   ECT_REG_ALSTAT      = 0x0130,
+N   ECT_REG_ALSTATCODE  = 0x0134,
+N   ECT_REG_PDICTL      = 0x0140,
+N   ECT_REG_IRQMASK     = 0x0200,
+N   ECT_REG_RXERR       = 0x0300,
+N   ECT_REG_FRXERR      = 0x0308,
+N   ECT_REG_EPUECNT     = 0x030C,
+N   ECT_REG_PECNT       = 0x030D,
+N   ECT_REG_PECODE      = 0x030E,
+N   ECT_REG_LLCNT       = 0x0310,
+N	 ECT_REG_WD          = 0x0420,
+N   ECT_REG_WDCNT       = 0x0442,
+N   ECT_REG_EEPCFG      = 0x0500,
+N   ECT_REG_EEPCTL      = 0x0502,
+N   ECT_REG_EEPSTAT     = 0x0502,
+N   ECT_REG_EEPADR      = 0x0504,
+N   ECT_REG_EEPDAT      = 0x0508,
+N   ECT_REG_FMMU0       = 0x0600,
+N   ECT_REG_FMMU1       = ECT_REG_FMMU0 + 0x10,
+N   ECT_REG_FMMU2       = ECT_REG_FMMU1 + 0x10,
+N   ECT_REG_FMMU3       = ECT_REG_FMMU2 + 0x10,
+N   ECT_REG_SM0         = 0x0800,
+N   ECT_REG_SM1         = ECT_REG_SM0 + 0x08,
+N   ECT_REG_SM2         = ECT_REG_SM1 + 0x08,
+N   ECT_REG_SM3         = ECT_REG_SM2 + 0x08,
+N   ECT_REG_SM0STAT     = ECT_REG_SM0 + 0x05,
+N   ECT_REG_SM1STAT     = ECT_REG_SM1 + 0x05,
+N   ECT_REG_SM1ACT      = ECT_REG_SM1 + 0x06,
+N   ECT_REG_SM1CONTR    = ECT_REG_SM1 + 0x07,
+N   ECT_REG_DCTIME0     = 0x0900,
+N   ECT_REG_DCTIME1     = 0x0904,
+N   ECT_REG_DCTIME2     = 0x0908,
+N   ECT_REG_DCTIME3     = 0x090C,
+N   ECT_REG_DCSYSTIME   = 0x0910,
+N   ECT_REG_DCSOF       = 0x0918,
+N   ECT_REG_DCSYSOFFSET = 0x0920,
+N   ECT_REG_DCSYSDELAY  = 0x0928,
+N   ECT_REG_DCSYSDIFF   = 0x092C,
+N   ECT_REG_DCSPEEDCNT  = 0x0930,
+N   ECT_REG_DCTIMEFILT  = 0x0934,
+N   ECT_REG_DCCUC       = 0x0980,
+N   ECT_REG_DCSYNCACT   = 0x0981,
+N   ECT_REG_DCSTART0    = 0x0990,
+N   ECT_REG_DCCYCLE0    = 0x09A0,
+N   ECT_REG_DCCYCLE1    = 0x09A4
+N};
+N
+N/** standard SDO Sync Manager Communication Type */
+N#define ECT_SDO_SMCOMMTYPE      0x1c00
+N/** standard SDO PDO assignment */
+N#define ECT_SDO_PDOASSIGN       0x1c10
+N/** standard SDO RxPDO assignment */
+N#define ECT_SDO_RXPDOASSIGN     0x1c12
+N/** standard SDO TxPDO assignment */
+N#define ECT_SDO_TXPDOASSIGN     0x1c13
+N
+N/** Ethercat packet type */
+N#define ETH_P_ECAT              0x88A4
+N
+N/** Error types */
+Ntypedef enum
+N{
+N   EC_ERR_TYPE_SDO_ERROR        = 0,
+N   EC_ERR_TYPE_EMERGENCY        = 1,
+N   EC_ERR_TYPE_PACKET_ERROR     = 3,
+N   EC_ERR_TYPE_SDOINFO_ERROR    = 4,
+N   EC_ERR_TYPE_FOE_ERROR        = 5,
+N   EC_ERR_TYPE_FOE_BUF2SMALL    = 6,
+N   EC_ERR_TYPE_FOE_PACKETNUMBER = 7,
+N   EC_ERR_TYPE_SOE_ERROR        = 8,
+N   EC_ERR_TYPE_MBX_ERROR        = 9
+N} ec_err_type;
+N
+N/** Struct to retrieve errors. */
+N#pragma anon_unions
+Ntypedef struct
+N{
+N   /** Signal bit, error set but not read */
+N   boolean     Signal;
+N   /** Slave number that generated the error */
+N   uint16      Slave;
+N   /** CoE SDO index that generated the error */
+N   uint16      Index;
+N   /** CoE SDO subindex that generated the error */
+N   uint8       SubIdx;
+N   /** Type of error */
+N   ec_err_type Etype;
+N   union
+N   {
+N      /** General abortcode */
+N      int32   AbortCode;
+N      /** Specific error for Emergency mailbox */
+N      struct
+N      {
+N         uint16  ErrorCode;
+N         uint8   ErrorReg;
+N         uint8   b1;
+N         uint16  w1;
+N         uint16  w2;
+N      };
+N   };
+N} ec_errort;
+N
+N/** Helper macros */
+N/** Macro to make a word from 2 bytes */
+N#define MK_WORD(msb, lsb)   ((((uint16)(msb))<<8) | (lsb))
+N/** Macro to get hi byte of a word */
+N#define HI_BYTE(w)          ((w) >> 8)
+N/** Macro to get low byte of a word */
+N#define LO_BYTE(w)          ((w) & 0x00ff)
+N/** Macro to swap hi and low byte of a word */
+N#define SWAP(w)             ((((w)& 0xff00) >> 8) | (((w) & 0x00ff) << 8))
+N/** Macro to get hi word of a dword */
+N#define LO_WORD(l)          ((l) & 0xffff)
+N/** Macro to get hi word of a dword */
+N#define HI_WORD(l)          ((l) >> 16)
+N
+N#define get_unaligned(ptr) \
+N  ({ __typeof__(*(ptr)) __tmp; memcpy(&__tmp, (ptr), sizeof(*(ptr))); __tmp; })
+X#define get_unaligned(ptr)   ({ __typeof__(*(ptr)) __tmp; memcpy(&__tmp, (ptr), sizeof(*(ptr))); __tmp; })
+N
+N#define put_unaligned32(val, ptr)        \
+N  (memcpy((ptr), &(val), 4))
+X#define put_unaligned32(val, ptr)          (memcpy((ptr), &(val), 4))
+N
+N#define put_unaligned64(val, ptr)        \
+N  (memcpy((ptr), &(val), 8))
+X#define put_unaligned64(val, ptr)          (memcpy((ptr), &(val), 8))
+N
+N#if !defined(EC_BIG_ENDIAN) && defined(EC_LITTLE_ENDIAN)
+X#if !1L && 0L
+S
+S	#define htons(A) (A)
+S  #define htoes(A) (A)
+S  #define htoel(A) (A)
+S  #define htoell(A) (A)
+S  #define etohs(A) (A)
+S  #define etohl(A) (A)
+S  #define etohll(A) (A)
+S
+N#elif !defined(EC_LITTLE_ENDIAN) && defined(EC_BIG_ENDIAN)
+X#elif !0L && 1L
+N//  #define htoes(A) ((((uint16)(A) & 0xff00) >> 8) | \
+N                    (((uint16)(A) & 0x00ff) << 8))
+X
+N//  #define htoel(A) ((((uint32)(A) & 0xff000000) >> 24) | \
+N//                    (((uint32)(A) & 0x00ff0000) >> 8)  | \
+N//                    (((uint32)(A) & 0x0000ff00) << 8)  | \
+N//                    (((uint32)(A) & 0x000000ff) << 24))
+X
+N//  #define htoell(A) ((((uint64)(A) & (uint64)0xff00000000000000ULL) >> 56) | \
+N//                     (((uint64)(A) & (uint64)0x00ff000000000000ULL) >> 40) | \
+N//                     (((uint64)(A) & (uint64)0x0000ff0000000000ULL) >> 24) | \
+N//                     (((uint64)(A) & (uint64)0x000000ff00000000ULL) >> 8)  | \
+N//                     (((uint64)(A) & (uint64)0x00000000ff000000ULL) << 8)  | \
+N//                     (((uint64)(A) & (uint64)0x0000000000ff0000ULL) << 24) | \
+N//                     (((uint64)(A) & (uint64)0x000000000000ff00ULL) << 40) | \
+N//                     (((uint64)(A) & (uint64)0x00000000000000ffULL) << 56))
+X
+N
+N//  #define etohs  htoes
+N//  #define etohl  htoel
+N//  #define etohll htoell
+N  #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \
+N                    (((uint16)(A) & 0x00ff) << 8))
+X  #define htons(A) ((((uint16)(A) & 0xff00) >> 8) |                     (((uint16)(A) & 0x00ff) << 8))
+N  #define htonl(A) ((((uint32)(A) & 0xff000000) >> 24) | \
+N                   (((uint32)(A) & 0x00ff0000) >> 8)  | \
+N                   (((uint32)(A) & 0x0000ff00) << 8)  | \
+N                   (((uint32)(A) & 0x000000ff) << 24)) 
+X  #define htonl(A) ((((uint32)(A) & 0xff000000) >> 24) |                    (((uint32)(A) & 0x00ff0000) >> 8)  |                    (((uint32)(A) & 0x0000ff00) << 8)  |                    (((uint32)(A) & 0x000000ff) << 24)) 
+N  #define htoes(A) (A)
+N  #define htoel(A) (A)
+N  #define htoell(A) (A)
+N
+N  #define etohs(A)  (A)
+N  #define etohl(A)  (A)
+N  #define etohll(A)  (A)
+N
+N#else
+S
+S  #error "Must define one of EC_BIG_ENDIAN or EC_LITTLE_ENDIAN"
+S
+N#endif
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif /* _EC_TYPE_H */
+L 48 "..\ETHERCAT\ethercatdc.c" 2
+N#include "ethercatbase.h"
+L 1 "..\ETHERCAT\ethercatbase.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercatbase.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file 
+N * \brief
+N * Headerfile for ethercatbase.c 
+N */
+N#include "nicdrv.h"
+L 1 "..\ETHERCAT\nicdrv.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : nicdrv.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file 
+N * \brief
+N * Headerfile for nicdrv.c 
+N */
+N
+N#ifndef _nicdrvh_
+N#define _nicdrvh_
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N#define HAVE_REMOTE
+N
+N
+N/** pointer structure to Tx and Rx stacks */
+Ntypedef struct
+N{
+N
+N   /** tx buffer */
+N   ec_bufT     (*txbuf)[EC_MAXBUF];
+X   ec_bufT     (*txbuf)[16];
+N   /** tx buffer lengths */
+N   int         (*txbuflength)[EC_MAXBUF];
+X   int         (*txbuflength)[16];
+N   /** temporary receive buffer */
+N   ec_bufT     *tempbuf;
+N   /** rx buffers */
+N   ec_bufT     (*rxbuf)[EC_MAXBUF];
+X   ec_bufT     (*rxbuf)[16];
+N   /** rx buffer status fields */
+N   int         (*rxbufstat)[EC_MAXBUF];
+X   int         (*rxbufstat)[16];
+N   /** received MAC source address (middle word) */
+N   int         (*rxsa)[EC_MAXBUF];
+X   int         (*rxsa)[16];
+N} ec_stackT;   
+N/** pointer structure to buffers for redundant port */
+Ntypedef struct
+N{
+N   ec_stackT   stack;
+N
+N   /** rx buffers */
+N   ec_bufT rxbuf[EC_MAXBUF];
+X   ec_bufT rxbuf[16];
+N   /** rx buffer status */
+N   int rxbufstat[EC_MAXBUF];
+X   int rxbufstat[16];
+N   /** rx MAC source address */
+N   int rxsa[EC_MAXBUF];
+X   int rxsa[16];
+N   /** temporary rx buffer */
+N   ec_bufT tempinbuf;
+N} ecx_redportt;
+N
+N/** pointer structure to buffers, vars and mutexes for port instantiation */
+Ntypedef struct
+N{
+N   ec_stackT   stack;
+N
+N   /** rx buffers */
+N   ec_bufT rxbuf[EC_MAXBUF];
+X   ec_bufT rxbuf[16];
+N   /** rx buffer status */
+N   int rxbufstat[EC_MAXBUF];
+X   int rxbufstat[16];
+N   /** rx MAC source address */
+N   int rxsa[EC_MAXBUF];
+X   int rxsa[16];
+N   /** temporary rx buffer */
+N   ec_bufT tempinbuf;
+N   /** temporary rx buffer status */
+N   int tempinbufs;
+N   /** transmit buffers */
+N   ec_bufT txbuf[EC_MAXBUF];
+X   ec_bufT txbuf[16];
+N   /** transmit buffer lenghts */
+N   int txbuflength[EC_MAXBUF];
+X   int txbuflength[16];
+N   /** temporary tx buffer */
+N	ec_bufT txbuf2;
+N   /** temporary tx buffer length */
+N  int txbuflength2;
+N   /** last used frame index */
+N   int lastidx;
+N   /** current redundancy state */
+N   int redstate;
+N	 ecx_redportt *redport; 
+N} ecx_portt;
+N
+Nextern const uint16 priMAC[3];
+Nextern const uint16 secMAC[3];
+N#ifdef EC_VER1
+Nextern ecx_portt     ecx_port;
+Nextern ecx_redportt  ecx_redport;
+N
+Nvoid ec_setbufstat(int idx, int bufstat);
+Nint ec_getindex(void);
+Nint ec_outframe(int idx, int sock);
+Nint ec_outframe_red(int idx);
+Nint ec_srconfirm(int idx,int timeout);
+N#endif
+N
+Nvoid ec_setupheader(void *p);
+Nint ecx_setupnic(ecx_portt *port,int secondary);
+Nvoid ecx_setbufstat(ecx_portt *port, int idx, int bufstat);
+Nint ecx_getindex(ecx_portt *port);
+Nint ecx_outframe(ecx_portt *port, int idx, int sock);
+Nint ecx_outframe_red(ecx_portt *port, int idx);
+Nint ecx_srconfirm(ecx_portt *port, int idx,int timeout);
+Nint ecx_waitinframe(ecx_portt *port, int idx, int timeout);
+Nint ecx_waitinframe_red(ecx_portt *port, int idx, int timeout);
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 47 "..\ETHERCAT\ethercatbase.h" 2
+N
+N#ifndef _ethercatbase_
+N#define _ethercatbase_
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+Nint ecx_setupdatagram(ecx_portt *port, void *frame, uint8 com, uint8 idx, uint16 ADP, uint16 ADO, uint16 length, void *data);
+Nint ecx_adddatagram(ecx_portt *port, void *frame, uint8 com, uint8 idx, boolean more, uint16 ADP, uint16 ADO, uint16 length, void *data);
+Nint ecx_BWR(ecx_portt *port, uint16 ADP,uint16 ADO,uint16 length,void *data,int timeout);
+Nint ecx_BRD(ecx_portt *port, uint16 ADP,uint16 ADO,uint16 length,void *data,int timeout);
+Nint ecx_APRD(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ecx_ARMW(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ecx_FRMW(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nuint16 ecx_APRDw(ecx_portt *port, uint16 ADP, uint16 ADO, int timeout);
+Nint ecx_FPRD(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nuint16 ecx_FPRDw(ecx_portt *port, uint16 ADP, uint16 ADO, int timeout);
+Nint ecx_APWRw(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 data, int timeout);
+Nint ecx_APWR(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ecx_FPWRw(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 data, int timeout);
+Nint ecx_FPWR(ecx_portt *port, uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ecx_LRW(ecx_portt *port, uint32 LogAdr, uint16 length, void *data, int timeout);
+Nint ecx_LRD(ecx_portt *port, uint32 LogAdr, uint16 length, void *data, int timeout);
+Nint ecx_LWR(ecx_portt *port, uint32 LogAdr, uint16 length, void *data, int timeout);
+Nint ecx_LRWDC(ecx_portt *port, uint32 LogAdr, uint16 length, void *data, uint16 DCrs, int64 *DCtime, int timeout);
+N
+N#ifdef EC_VER1
+Nint ec_setupdatagram(void *frame, uint8 com, uint8 idx, uint16 ADP, uint16 ADO, uint16 length, void *data);
+Nint ec_adddatagram(void *frame, uint8 com, uint8 idx, boolean more, uint16 ADP, uint16 ADO, uint16 length, void *data);
+Nint ec_BWR(uint16 ADP,uint16 ADO,uint16 length,void *data,int timeout);
+Nint ec_BRD(uint16 ADP,uint16 ADO,uint16 length,void *data,int timeout);
+Nint ec_APRD(uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ec_ARMW(uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ec_FRMW(uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nuint16 ec_APRDw(uint16 ADP, uint16 ADO, int timeout);
+Nint ec_FPRD(uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nuint16 ec_FPRDw(uint16 ADP, uint16 ADO, int timeout);
+Nint ec_APWRw(uint16 ADP, uint16 ADO, uint16 data, int timeout);
+Nint ec_APWR(uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ec_FPWRw(uint16 ADP, uint16 ADO, uint16 data, int timeout);
+Nint ec_FPWR(uint16 ADP, uint16 ADO, uint16 length, void *data, int timeout);
+Nint ec_LRW(uint32 LogAdr, uint16 length, void *data, int timeout);
+Nint ec_LRD(uint32 LogAdr, uint16 length, void *data, int timeout);
+Nint ec_LWR(uint32 LogAdr, uint16 length, void *data, int timeout);
+Nint ec_LRWDC(uint32 LogAdr, uint16 length, void *data, uint16 DCrs, int64 *DCtime, int timeout);
+N#endif
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 49 "..\ETHERCAT\ethercatdc.c" 2
+N#include "ethercatmain.h"
+L 1 "..\ETHERCAT\ethercatmain.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercatmain.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo 揈therCAT?are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstra遝 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file 
+N * \brief
+N * Headerfile for ethercatmain.c 
+N */
+N
+N#include "nicdrv.h"
+N
+N#ifndef _ethercatmain_
+N#define _ethercatmain_
+N
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N/** max. etries in EtherCAT error list */
+N#define EC_MAXELIST       64
+N/** max. length of readable name in slavelist and Object Description List */
+N#define EC_MAXNAME        20
+N/** max. number of slaves in array */
+N#define EC_MAXSLAVE       20
+N/** max. number of groups */
+N#define EC_MAXGROUP       2
+N/** max. number of IO segments per group */
+N#define EC_MAXIOSEGMENTS  64
+N/** max. mailbox size */
+N#define EC_MAXMBX         1486
+N/** max. eeprom PDO entries */
+N#define EC_MAXEEPDO       0x200
+N/** max. SM used */
+N#define EC_MAXSM          8
+N/** max. FMMU used */
+N#define EC_MAXFMMU        4
+N/** max. Adapter */
+N#define EC_MAXLEN_ADAPTERNAME    128
+N
+N
+N/** record for FMMU */
+Ntypedef struct
+N{
+N   uint32  LogStart;
+N   uint16  LogLength;
+N   uint8   LogStartbit;
+N   uint8   LogEndbit;
+N   uint16  PhysStart;
+N   uint8   PhysStartBit;
+N   uint8   FMMUtype;
+N   uint8   FMMUactive;
+N   uint8   unused1;
+N   uint16  unused2;  
+N}ec_fmmut;
+N
+N/** record for sync manager */
+Ntypedef struct
+N{
+N   uint16  StartAddr;
+N   uint16  SMlength;
+N   uint32  SMflags;
+N} ec_smt;
+N
+Ntypedef struct
+N{
+N   uint16  State;
+N   uint16  Unused;
+N   uint16  ALstatuscode;
+N} ec_state_status;
+N
+N#define ECT_MBXPROT_AOE      0x0001
+N#define ECT_MBXPROT_EOE      0x0002
+N#define ECT_MBXPROT_COE      0x0004
+N#define ECT_MBXPROT_FOE      0x0008
+N#define ECT_MBXPROT_SOE      0x0010
+N#define ECT_MBXPROT_VOE      0x0020
+N
+N#define ECT_COEDET_SDO       0x01
+N#define ECT_COEDET_SDOINFO   0x02
+N#define ECT_COEDET_PDOASSIGN 0x04
+N#define ECT_COEDET_PDOCONFIG 0x08
+N#define ECT_COEDET_UPLOAD    0x10
+N#define ECT_COEDET_SDOCA     0x20
+N
+N#define EC_SMENABLEMASK      0xfffeffff
+N
+N/** for list of ethercat slaves detected */
+N//#pragma pack (4)
+Ntypedef struct
+N{
+N   /** state of slave */
+N   uint16           state;
+N   /** AL status code */
+N   uint16           ALstatuscode;
+N   /** Configured address */
+N   uint16           configadr;
+N   /** Alias address */
+N   uint16           aliasadr;
+N   /** Manufacturer from EEprom */
+N   uint32           eep_man;
+N   /** ID from EEprom */
+N   uint32           eep_id;
+N   /** revision from EEprom */
+N   uint32           eep_rev;
+N   /** Interface type */
+N   uint16           Itype;
+N   /** Device type */
+N   uint16           Dtype;
+N   /** output bits */
+N   uint16           Obits;
+N   /** output bytes, if Obits < 8 then Obytes = 0 */
+N   uint32           Obytes;
+N   /** output pointer in IOmap buffer */
+N   uint8            *outputs;
+N   /** startbit in first output byte */
+N   uint8            Ostartbit;
+N   /** input bits */
+N   uint16           Ibits;
+N   /** input bytes, if Ibits < 8 then Ibytes = 0 */
+N   uint32           Ibytes;
+N   /** input pointer in IOmap buffer */
+N   uint8            *inputs;
+N   /** startbit in first input byte */
+N   uint8            Istartbit;
+N   /** SM structure */
+N   ec_smt           SM[EC_MAXSM];
+X   ec_smt           SM[8];
+N   /** SM type 0=unused 1=MbxWr 2=MbxRd 3=Outputs 4=Inputs */
+N   uint8            SMtype[EC_MAXSM];
+X   uint8            SMtype[8];
+N   /** FMMU structure */
+N   ec_fmmut         FMMU[EC_MAXFMMU];
+X   ec_fmmut         FMMU[4];
+N   /** FMMU0 function */
+N   uint8            FMMU0func;
+N   /** FMMU1 function */
+N   uint8            FMMU1func;
+N   /** FMMU2 function */
+N   uint8            FMMU2func;
+N   /** FMMU3 function */
+N   uint8            FMMU3func;
+N   /** length of write mailbox in bytes, if no mailbox then 0 */
+N   uint16           mbx_l;
+N   /** mailbox write offset */
+N   uint16           mbx_wo;
+N   /** length of read mailbox in bytes */
+N   uint16           mbx_rl;
+N   /** mailbox read offset */
+N   uint16           mbx_ro;
+N   /** mailbox supported protocols */
+N   uint16           mbx_proto;
+N   /** Counter value of mailbox link layer protocol 1..7 */
+N   uint8            mbx_cnt;
+N   /** has DC capabillity */
+N   boolean          hasdc;
+N   /** Physical type; Ebus, EtherNet combinations */
+N   uint8            ptype;
+N   /** topology: 1 to 3 links */
+N   uint8            topology;
+N   /** active ports bitmap : ....3210 , set if respective port is active **/
+N   uint8            activeports;
+N   /** consumed ports bitmap : ....3210, used for internal delay measurement **/
+N   uint8            consumedports;
+N   /** slave number for parent, 0=master */
+N   uint16           parent;
+N   /** port number on parent this slave is connected to **/
+N   uint8            parentport;
+N   /** port number on this slave the parent is connected to **/
+N   uint8            entryport;
+N   /** DC receivetimes on port A */
+N   int32            DCrtA;
+N   /** DC receivetimes on port B */
+N   int32            DCrtB; 
+N   /** DC receivetimes on port C */
+N   int32            DCrtC;
+N   /** DC receivetimes on port D */
+N   int32            DCrtD;
+N   /** propagation delay */
+N   int32            pdelay;
+N   /** next DC slave */
+N   uint16           DCnext;
+N   /** previous DC slave */
+N   uint16           DCprevious;
+N   /** DC cyle time in ns */
+N   int32            DCcycle;
+N   /** DC shift from clock modulus boundary */
+N   int32            DCshift;
+N   /** DC sync activation, 0=off, 1=on */
+N   uint8            DCactive;
+N   /** link to config table */
+N   uint16           configindex;
+N   /** link to SII config */
+N   uint16           SIIindex;
+N   /** 1 = 8 bytes per read, 0 = 4 bytes per read */
+N   uint8            eep_8byte;
+N   /** 0 = eeprom to master , 1 = eeprom to PDI */
+N   uint8            eep_pdi;
+N   /** CoE details */
+N   uint8            CoEdetails;
+N   /** FoE details */
+N   uint8            FoEdetails;
+N   /** EoE details */
+N   uint8            EoEdetails;
+N   /** SoE details */
+N   uint8            SoEdetails;
+N   /** E-bus current */
+N   int16            Ebuscurrent;
+N   /** if >0 block use of LRW in processdata */
+N   uint8            blockLRW;
+N   /** group */
+N   uint8            group;
+N   /** first unused FMMU */
+N   uint8            FMMUunused;
+N   /** TRUE is slave is not responding at all */
+N   boolean          islost;
+N   /** registered configuration function PO->SO */
+N   int              (*PO2SOconfig)(uint16 slave);
+N   /** readable name */
+N   char             name[EC_MAXNAME + 1];
+X   char             name[20 + 1];
+N} ec_slavet;
+N#pragma pack () 
+N/** for list of ethercat slave groups */
+Ntypedef struct
+N{
+N   /** logical start address for this group */
+N   uint32           logstartaddr;
+N   /** output bytes, if Obits < 8 then Obytes = 0 */
+N   uint32           Obytes;
+N   /** output pointer in IOmap buffer */
+N   uint8            *outputs;
+N   /** input bytes, if Ibits < 8 then Ibytes = 0 */
+N   uint32           Ibytes;
+N   /** input pointer in IOmap buffer */
+N   uint8            *inputs;
+N   /** has DC capabillity */
+N   boolean          hasdc;
+N   /** next DC slave */
+N   uint16           DCnext;
+N   /** E-bus current */
+N   int16            Ebuscurrent;
+N   /** if >0 block use of LRW in processdata */
+N   uint8            blockLRW;
+N   /** IO segegments used */
+N   uint16           nsegments;
+N   /** 1st input segment */
+N   uint16           Isegment;
+N   /** Offset in input segment */
+N   uint16           Ioffset;
+N   /** Expected workcounter outputs */
+N   uint16           outputsWKC;
+N   /** Expected workcounter inputs */
+N   uint16           inputsWKC;
+N   /** check slave states */
+N   boolean          docheckstate;
+N   /** IO segmentation list. Datagrams must not break SM in two. */
+N   uint32           IOsegment[EC_MAXIOSEGMENTS];
+X   uint32           IOsegment[64];
+N} ec_groupt;
+N
+N/** SII FMMU structure */
+Ntypedef struct
+N{
+N   uint16  Startpos;
+N   uint8   nFMMU;
+N   uint8   FMMU0;
+N   uint8   FMMU1;
+N   uint8   FMMU2;
+N   uint8   FMMU3;
+N} ec_eepromFMMUt;
+N
+N/** SII SM structure */
+Ntypedef struct
+N{
+N   uint16  Startpos;
+N   uint8   nSM;
+N   uint16  PhStart;
+N   uint16  Plength;
+N   uint8   Creg;
+N   uint8   Sreg;       /* dont care */
+N   uint8   Activate;
+N   uint8   PDIctrl;      /* dont care */
+N} ec_eepromSMt;
+N
+N/** record to store rxPDO and txPDO table from eeprom */
+Ntypedef struct 
+N{
+N   uint16  Startpos;
+N   uint16  Length;
+N   uint16  nPDO;
+N   uint16  Index[EC_MAXEEPDO];
+X   uint16  Index[0x200];
+N   uint16  SyncM[EC_MAXEEPDO];
+X   uint16  SyncM[0x200];
+N   uint16  BitSize[EC_MAXEEPDO];
+X   uint16  BitSize[0x200];
+N   uint16  SMbitsize[EC_MAXSM];
+X   uint16  SMbitsize[8];
+N} ec_eepromPDOt;
+N
+N/** mailbox buffer array */
+Ntypedef uint8 ec_mbxbuft[EC_MAXMBX + 1];
+Xtypedef uint8 ec_mbxbuft[1486 + 1];
+N
+N/** standard ethercat mailbox header */
+Ntypedef struct
+N{
+N   uint16  length;
+N   uint16  address;
+N   uint8   priority;
+N   uint8   mbxtype;
+N} ec_mbxheadert;
+N
+N
+N/** ALstatus and ALstatus code */
+Ntypedef struct
+N{
+N   uint16  alstatus;
+N   uint16  unused;
+N   uint16  alstatuscode;
+N} ec_alstatust;
+N
+N/** stack structure to store segmented LRD/LWR/LRW constructs */
+Ntypedef struct
+N{
+N   uint8   pushed;
+N   uint8   pulled;
+N   uint8   idx[EC_MAXBUF];
+X   uint8   idx[16];
+N   void    *data[EC_MAXBUF];
+X   void    *data[16];
+N   uint16  length[EC_MAXBUF];
+X   uint16  length[16];
+N} ec_idxstackT;
+N
+N/** ringbuf for error storage */
+Ntypedef struct 
+N{
+N   int16     head;
+N   int16     tail;
+N   ec_errort Error[EC_MAXELIST + 1];
+X   ec_errort Error[64 + 1];
+N} ec_eringt;
+N
+N/** SyncManager Communication Type structure for CA */
+Ntypedef struct
+N{
+N   uint8   n;
+N   uint8   nu1;
+N   uint8   SMtype[EC_MAXSM];
+X   uint8   SMtype[8];
+N} ec_SMcommtypet;   
+N
+N/** SDO assign structure for CA */
+Ntypedef struct
+N{
+N   uint8   n;
+N   uint8   nu1;
+N   uint16  index[256];
+N} ec_PDOassignt;   
+N
+N/** SDO description structure for CA */
+Ntypedef struct
+N{
+N   uint8   n;
+N   uint8   nu1;
+N   uint32  PDO[256];
+N} ec_PDOdesct;   
+N
+N/** Context structure , referenced by all ecx functions*/
+Ntypedef struct
+N{
+N   /** port reference, may include red_port */
+N   ecx_portt      *port;
+N   /** slavelist reference */
+N   ec_slavet      *slavelist;
+N   /** number of slaves found in configuration */
+N   int            *slavecount;
+N   /** maximum number of slaves allowed in slavelist */
+N   int            maxslave;
+N   /** grouplist reference */
+N   ec_groupt      *grouplist;
+N   /** maximum number of groups allowed in grouplist */
+N   int            maxgroup;
+N   /** internal, reference to eeprom cache buffer */
+N   uint8          *esibuf;
+N   /** internal, reference to eeprom cache map */
+N   uint32         *esimap;
+N   /** internal, current slave for eeprom cache */
+N   uint16         esislave;
+N   /** internal, reference to error list */
+N   ec_eringt      *elist;
+N   /** internal, reference to processdata stack buffer info */
+N   ec_idxstackT   *idxstack;
+N   /** reference to ecaterror state */
+N   boolean        *ecaterror;
+N   /** internal, position of DC datagram in process data packet */
+N   uint16         DCtO;
+N   /** internal, length of DC datagram */
+N   uint16         DCl;
+N   /** reference to last DC time from slaves */
+N   int64          *DCtime;
+N   /** internal, SM buffer */
+N   ec_SMcommtypet *SMcommtype;
+N   /** internal, PDO assign list */
+N   ec_PDOassignt  *PDOassign;
+N   /** internal, PDO description list */
+N   ec_PDOdesct    *PDOdesc;
+N   /** internal, SM list from eeprom */
+N   ec_eepromSMt   *eepSM;
+N   /** internal, FMMU list from eeprom */
+N   ec_eepromFMMUt *eepFMMU; 
+N   /** registered FoE hook */
+N   int            (*FOEhook)(uint16 slave, int packetnumber, int datasize);
+N} ecx_contextt;
+N
+N#ifdef EC_VER1
+N/** global struct to hold default master context */
+Nextern ecx_contextt  ecx_context;
+N/** main slave data structure array */
+Nextern ec_slavet   ec_slave[EC_MAXSLAVE];
+Xextern ec_slavet   ec_slave[20];
+N/** number of slaves found by configuration function */
+Nextern int         ec_slavecount;
+N/** slave group structure */
+Nextern ec_groupt   ec_group[EC_MAXGROUP];
+Xextern ec_groupt   ec_group[2];
+Nextern boolean     EcatError;
+Nextern int64       ec_DCtime;
+N
+N
+N
+N
+Nint ec_init(void);
+N
+N
+Nuint16 ec_statecheck(uint16 slave, uint16 reqstate, int timeout);
+N#endif
+N
+Nuint8 ec_nextmbxcnt(uint8 cnt);
+Nvoid ec_clearmbx(ec_mbxbuft *Mbx);
+Nvoid ecx_pusherror(ecx_contextt *context, const ec_errort *Ec);
+Nboolean ecx_poperror(ecx_contextt *context, ec_errort *Ec);
+Nvoid ecx_packeterror(ecx_contextt *context, uint16 Slave, uint16 Index, uint8 SubIdx, uint16 ErrorCode);
+Nint ecx_init(ecx_contextt *context);
+Nint ecx_init_redundant(ecx_contextt *context, ecx_redportt *redport);
+Nuint8 ecx_siigetbyte(ecx_contextt *context, uint16 slave, uint16 address);
+Nint16 ecx_siifind(ecx_contextt *context, uint16 slave, uint16 cat);
+Nvoid ecx_siistring(ecx_contextt *context, char *str, uint16 slave, uint16 Sn);
+Nuint16 ecx_siiFMMU(ecx_contextt *context, uint16 slave, ec_eepromFMMUt* FMMU);
+Nuint16 ecx_siiSM(ecx_contextt *context, uint16 slave, ec_eepromSMt* SM);
+Nuint16 ecx_siiSMnext(ecx_contextt *context, uint16 slave, ec_eepromSMt* SM, uint16 n);
+Nint ecx_siiPDO(ecx_contextt *context, uint16 slave, ec_eepromPDOt* PDO, uint8 t);
+Nuint16 ecx_statecheck(ecx_contextt *context, uint16 slave, uint16 reqstate, int timeout);
+Nint ecx_mbxempty(ecx_contextt *context, uint16 slave, int timeout);
+Nint ecx_mbxsend(ecx_contextt *context, uint16 slave,ec_mbxbuft *mbx, int timeout);
+Nint ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeout);
+Nuint32 ecx_readeeprom(ecx_contextt *context, uint16 slave, uint16 eeproma, int timeout);
+Nint ecx_writeeeprom(ecx_contextt *context, uint16 slave, uint16 eeproma, uint16 data, int timeout);
+Nint ecx_eeprom2master(ecx_contextt *context, uint16 slave);
+Nint ecx_eeprom2pdi(ecx_contextt *context, uint16 slave);
+Nuint64 ecx_readeepromAP(ecx_contextt *context, uint16 aiadr, uint16 eeproma, int timeout);
+Nint ecx_writeeepromAP(ecx_contextt *context, uint16 aiadr, uint16 eeproma, uint16 data, int timeout);
+Nuint64 ecx_readeepromFP(ecx_contextt *context, uint16 configadr, uint16 eeproma, int timeout);
+Nint ecx_writeeepromFP(ecx_contextt *context, uint16 configadr, uint16 eeproma, uint16 data, int timeout);
+Nvoid ecx_readeeprom1(ecx_contextt *context, uint16 slave, uint16 eeproma);
+Nuint32 ecx_readeeprom2(ecx_contextt *context, uint16 slave, int timeout);
+Nint ec_writestate(uint16 slave);
+Nint ec_readstate(void);
+Nint ecx_readstate(ecx_contextt *context);
+Nint ecx_writestate(ecx_contextt *context, uint16 slave);
+Nint ec_send_processdata_group(uint8 group);
+Nint ecx_receive_processdata_group(ecx_contextt *context, uint8 group, int timeout);
+Nint ec_receive_processdata_group(uint8 group, int timeout);
+Nint ec_send_processdata(void);
+Nint ec_receive_processdata(int timeout);
+Nint ecx_send_processdata_group(ecx_contextt *context, uint8 group);
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 50 "..\ETHERCAT\ethercatdc.c" 2
+N#include "ethercatdc.h"
+L 1 "..\ETHERCAT\ethercatdc.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercatdc.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file 
+N * \brief
+N * Headerfile for ethercatdc.c 
+N */
+N
+N#ifndef _EC_ECATDC_H
+N#define _EC_ECATDC_H
+N
+N
+Ntypedef struct
+N{
+N    uint32 sec;     /*< Seconds elapsed since the Epoch (Jan 1, 1970) */
+N    int32 usec;    /*< Microseconds elapsed since last second boundary */
+N} ec_timet;
+N
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N	
+N#ifdef EC_VER1
+W "..\ETHERCAT\ethercatdc.h" 64 9 Deprecated declaration ec_configdc - give arg types
+Nboolean ec_configdc();
+Nvoid ec_dcsync0(uint16 slave, boolean act, uint32 CyclTime, uint32 CyclShift);
+Nvoid ec_dcsync01(uint16 slave, boolean act, uint32 CyclTime0, uint32 CyclTime1, uint32 CyclShift);
+N#endif
+N
+Nboolean ecx_configdc(ecx_contextt *context);
+Nvoid ecx_dcsync0(ecx_contextt *context, uint16 slave, boolean act, uint32 CyclTime, uint32 CyclShift);
+Nvoid ecx_dcsync01(ecx_contextt *context, uint16 slave, boolean act, uint32 CyclTime0, uint32 CyclTime1, uint32 CyclShift);
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif /* _EC_ECATDC_H */
+L 51 "..\ETHERCAT\ethercatdc.c" 2
+N
+N#define PORTM0 0x01
+N#define PORTM1 0x02
+N#define PORTM2 0x04
+N#define PORTM3 0x08
+N
+N/** 1st sync pulse delay in ns here 100ms */
+N#define SyncDelay       ((int32)100000000)
+N
+N
+N
+N/**
+N * Set DC of slave to fire sync0 at CyclTime interval with CyclShift offset.
+N *
+N * @param[in]  context        = context struct
+N * @param [in] slave            Slave number.
+N * @param [in] act              TRUE = active, FALSE = deactivated
+N * @param [in] CyclTime         Cycltime in ns.
+N * @param [in] CyclShift        CyclShift in ns.
+N */
+Nvoid ecx_dcsync0(ecx_contextt *context, uint16 slave, boolean act, uint32 CyclTime, uint32 CyclShift)
+N{
+N   uint8 h, RA;
+N   uint16 slaveh;
+N   int64 t, t1;
+N   int32 tc;
+N
+N   slaveh = context->slavelist[slave].configadr;
+N   RA = 0;
+N
+N   /* stop cyclic operation, ready for next trigger */
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, EC_TIMEOUTRET);
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, 2000);
+N   if (act)
+N   {
+N       RA = 1 + 2;    /* act cyclic operation and sync0, sync1 deactivated */
+N   }
+N   h = 0;
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCUC, sizeof(h), &h, EC_TIMEOUTRET); /* write access to ethercat */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCUC, sizeof(h), &h, 2000);  
+N   t1 = 0;
+N   (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCSYSTIME, sizeof(t1), &t1, EC_TIMEOUTRET); /* read local time of slave */
+X   (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCSYSTIME, sizeof(t1), &t1, 2000);  
+N   t1 = etohll(t1);
+X   t1 = (t1);
+N
+N   /* Calculate first trigger time, always a whole multiple of CyclTime rounded up
+N   plus the shifttime (can be negative)
+N   This insures best sychronisation between slaves, slaves with the same CyclTime
+N   will sync at the same moment (you can use CyclShift to shift the sync) */
+N   if (CyclTime > 0)
+N   {
+N       t = ((t1 + SyncDelay) / CyclTime) * CyclTime + CyclTime + CyclShift;
+X       t = ((t1 + ((int32)100000000)) / CyclTime) * CyclTime + CyclTime + CyclShift;
+N   }
+N   else
+N   {
+N      t = t1 + SyncDelay + CyclShift;
+X      t = t1 + ((int32)100000000) + CyclShift;
+N      /* first trigger at T1 + CyclTime + SyncDelay + CyclShift in ns */
+N   }
+N   t = htoell(t);
+X   t = (t);
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSTART0, sizeof(t), &t, EC_TIMEOUTRET); /* SYNC0 start time */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSTART0, sizeof(t), &t, 2000);  
+N   tc = htoel(CyclTime);
+X   tc = (CyclTime);
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCYCLE0, sizeof(tc), &tc, EC_TIMEOUTRET); /* SYNC0 cycle time */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCYCLE0, sizeof(tc), &tc, 2000);  
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, EC_TIMEOUTRET); /* activate cyclic operation */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, 2000);  
+N}
+N
+N/**
+N * Set DC of slave to fire sync0 and sync1 at CyclTime interval with CyclShift offset.
+N *
+N * @param[in]  context        = context struct
+N * @param [in] slave            Slave number.
+N * @param [in] act              TRUE = active, FALSE = deactivated
+N * @param [in] CyclTime0        Cycltime SYNC0 in ns.
+N * @param [in] CyclTime1        Cycltime SYNC1 in ns. This time is a delta time in relation to
+N                                the SYNC0 fire. If CylcTime1 = 0 then SYNC1 fires a the same time
+N                                as SYNC0.
+N * @param [in] CyclShift        CyclShift in ns.
+N */
+Nvoid ecx_dcsync01(ecx_contextt *context, uint16 slave, boolean act, uint32 CyclTime0, uint32 CyclTime1, uint32 CyclShift)
+N{
+N   uint8 h, RA;
+N   uint16 slaveh;
+N   int64 t, t1;
+N   int32 tc;
+N   uint32 TrueCyclTime;
+N  
+N   /* Sync1 can be used as a multiple of Sync0, use true cycle time */
+N   TrueCyclTime = ((CyclTime1 / CyclTime0) + 1) * CyclTime0;
+N
+N   slaveh = context->slavelist[slave].configadr;
+N   RA = 0;
+N
+N   /* stop cyclic operation, ready for next trigger */
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, EC_TIMEOUTRET);
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, 2000);
+N   if (act)
+N   {
+N      RA = 1 + 2 + 4;    /* act cyclic operation and sync0 + sync1 */
+N   }
+N   h = 0;
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCUC, sizeof(h), &h, EC_TIMEOUTRET); /* write access to ethercat */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCUC, sizeof(h), &h, 2000);  
+N   t1 = 0;
+N   (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCSYSTIME, sizeof(t1), &t1, EC_TIMEOUTRET); /* read local time of slave */
+X   (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCSYSTIME, sizeof(t1), &t1, 2000);  
+N   t1 = etohll(t1);
+X   t1 = (t1);
+N
+N   /* Calculate first trigger time, always a whole multiple of TrueCyclTime rounded up
+N   plus the shifttime (can be negative)
+N   This insures best sychronisation between slaves, slaves with the same CyclTime
+N   will sync at the same moment (you can use CyclShift to shift the sync) */
+N   if (CyclTime0 > 0)
+N   {
+N      t = ((t1 + SyncDelay) / TrueCyclTime) * TrueCyclTime + TrueCyclTime + CyclShift;
+X      t = ((t1 + ((int32)100000000)) / TrueCyclTime) * TrueCyclTime + TrueCyclTime + CyclShift;
+N   }
+N   else
+N   {
+N      t = t1 + SyncDelay + CyclShift;
+X      t = t1 + ((int32)100000000) + CyclShift;
+N      /* first trigger at T1 + CyclTime + SyncDelay + CyclShift in ns */
+N   }
+N   t = htoell(t);
+X   t = (t);
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSTART0, sizeof(t), &t, EC_TIMEOUTRET); /* SYNC0 start time */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSTART0, sizeof(t), &t, 2000);  
+N   tc = htoel(CyclTime0);
+X   tc = (CyclTime0);
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCYCLE0, sizeof(tc), &tc, EC_TIMEOUTRET); /* SYNC0 cycle time */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCYCLE0, sizeof(tc), &tc, 2000);  
+N   tc = htoel(CyclTime1);
+X   tc = (CyclTime1);
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCYCLE1, sizeof(tc), &tc, EC_TIMEOUTRET); /* SYNC1 cycle time */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCCYCLE1, sizeof(tc), &tc, 2000);  
+N   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, EC_TIMEOUTRET); /* activate cyclic operation */
+X   (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYNCACT, sizeof(RA), &RA, 2000);  
+N}
+N
+N/* latched port time of slave */
+Nstatic int32 ecx_porttime(ecx_contextt *context, uint16 slave, uint8 port)
+N{
+N   int32 ts;
+N   switch (port)
+N   {
+N      case 0:
+N         ts = context->slavelist[slave].DCrtA;
+N         break;
+N      case 1:
+N         ts = context->slavelist[slave].DCrtB;
+N         break;
+N      case 2:
+N         ts = context->slavelist[slave].DCrtC;
+N         break;
+N      case 3:
+N         ts = context->slavelist[slave].DCrtD;
+N         break;
+N      default:
+N         ts = 0;
+N         break;
+N   }
+N   return ts;
+N}
+N
+N/* calculate previous active port of a slave */
+Nstatic uint8 ecx_prevport(ecx_contextt *context, uint16 slave, uint8 port)
+N{
+N   uint8 pport = port;
+N   uint8 aport = context->slavelist[slave].activeports;
+N   switch(port)
+N   {
+N      case 0:
+N         if(aport & PORTM2)
+X         if(aport & 0x04)
+N            pport = 2;
+N         else if (aport & PORTM1)
+X         else if (aport & 0x02)
+N            pport = 1;
+N         else if (aport & PORTM3)
+X         else if (aport & 0x08)
+N            pport = 3;
+N         break;
+N      case 1:
+N         if(aport & PORTM3)
+X         if(aport & 0x08)
+N            pport = 3;
+N         else if (aport & PORTM0)
+X         else if (aport & 0x01)
+N            pport = 0;
+N         else if (aport & PORTM2)
+X         else if (aport & 0x04)
+N            pport = 2;
+N         break;
+N      case 2:
+N         if(aport & PORTM1)
+X         if(aport & 0x02)
+N            pport = 1;
+N         else if (aport & PORTM3)
+X         else if (aport & 0x08)
+N            pport = 3;
+N         else if (aport & PORTM0)
+X         else if (aport & 0x01)
+N            pport = 0;
+N         break;
+N      case 3:
+N         if(aport & PORTM0)
+X         if(aport & 0x01)
+N            pport = 0;
+N         else if (aport & PORTM2)
+X         else if (aport & 0x04)
+N            pport = 2;
+N         else if (aport & PORTM1)
+X         else if (aport & 0x02)
+N            pport = 1;
+N         break;
+N   }      
+N   return pport;
+N}
+N
+N/* search unconsumed ports in parent, consume and return first open port */
+Nstatic uint8 ecx_parentport(ecx_contextt *context, uint16 parent)
+N{
+N   uint8 parentport = 0;
+N   uint8 b;
+N   /* search order is important, here 3 - 1 - 2 - 0 */
+N   b = context->slavelist[parent].consumedports;
+N   if (b & PORTM3)
+X   if (b & 0x08)
+N   {
+N      parentport = 3;
+N      b &= (uint8)~PORTM3;
+X      b &= (uint8)~0x08;
+N   }
+N   else if (b & PORTM1)
+X   else if (b & 0x02)
+N   {
+N      parentport = 1;
+N      b &= (uint8)~PORTM1;
+X      b &= (uint8)~0x02;
+N   }
+N   else if (b & PORTM2)
+X   else if (b & 0x04)
+N   {
+N      parentport = 2;
+N      b &= (uint8)~PORTM2;
+X      b &= (uint8)~0x04;
+N   }
+N   else if (b & PORTM0)
+X   else if (b & 0x01)
+N   {
+N      parentport = 0;
+N      b &= (uint8)~PORTM0;
+X      b &= (uint8)~0x01;
+N   }
+N   context->slavelist[parent].consumedports = b;
+N   return parentport;
+N}
+N
+N/**
+N * Locate DC slaves, measure propagation delays.
+N *
+N * @param[in]  context        = context struct
+N * @return boolean if slaves are found with DC
+N */
+Nboolean ecx_configdc(ecx_contextt *context)
+N{
+N   uint16 i, slaveh, parent, child;
+N   uint16 parenthold = 0;
+N   uint16 prevDCslave = 0;
+N   int32 ht, dt1, dt2, dt3;
+N   int64 hrt;
+N   uint8 entryport;
+N   int8 nlist;
+N   int8 plist[4];
+N   int32 tlist[4];
+N
+N   context->slavelist[0].hasdc = FALSE;
+X   context->slavelist[0].hasdc = 0;
+N   context->grouplist[0].hasdc = FALSE;
+X   context->grouplist[0].hasdc = 0;
+N   ht = 0;
+N//   mastertime = osal_current_time();
+N   ecx_BWR(context->port, 0, ECT_REG_DCTIME0, sizeof(ht), &ht, EC_TIMEOUTRET);  /* latch DCrecvTimeA of all slaves */
+X   ecx_BWR(context->port, 0, ECT_REG_DCTIME0, sizeof(ht), &ht, 2000);   
+N   for (i = 1; i <= *(context->slavecount); i++)
+N   {
+N      context->slavelist[i].consumedports = context->slavelist[i].activeports;
+N      if (context->slavelist[i].hasdc)
+N      {
+N         if (!context->slavelist[0].hasdc)
+N         {
+N            context->slavelist[0].hasdc = TRUE;
+X            context->slavelist[0].hasdc = 1;
+N            context->slavelist[0].DCnext = i;
+N            context->slavelist[i].DCprevious = 0;
+N            context->grouplist[0].hasdc = TRUE;
+X            context->grouplist[0].hasdc = 1;
+N            context->grouplist[0].DCnext = i;
+N         }
+N         else
+N         {
+N            context->slavelist[prevDCslave].DCnext = i;
+N            context->slavelist[i].DCprevious = prevDCslave;
+N         }
+N         /* this branch has DC slave so remove parenthold */
+N         parenthold = 0;
+N         prevDCslave = i;
+N         slaveh = context->slavelist[i].configadr;
+N         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME0, sizeof(ht), &ht, EC_TIMEOUTRET);
+X         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME0, sizeof(ht), &ht, 2000);
+N         context->slavelist[i].DCrtA = etohl(ht);
+X         context->slavelist[i].DCrtA = (ht);
+N         /* 64bit latched DCrecvTimeA of each specific slave */
+N         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCSOF, sizeof(hrt), &hrt, EC_TIMEOUTRET);
+X         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCSOF, sizeof(hrt), &hrt, 2000);
+N         /* use it as offset in order to set local time around 0 + mastertime */
+N         hrt = htoell(-etohll(hrt));
+X         hrt = (-(hrt));
+N         /* save it in the offset register */
+N         (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYSOFFSET, sizeof(hrt), &hrt, EC_TIMEOUTRET);
+X         (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYSOFFSET, sizeof(hrt), &hrt, 2000);
+N         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME1, sizeof(ht), &ht, EC_TIMEOUTRET);
+X         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME1, sizeof(ht), &ht, 2000);
+N         context->slavelist[i].DCrtB = etohl(ht);
+X         context->slavelist[i].DCrtB = (ht);
+N         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME2, sizeof(ht), &ht, EC_TIMEOUTRET);
+X         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME2, sizeof(ht), &ht, 2000);
+N         context->slavelist[i].DCrtC = etohl(ht);
+X         context->slavelist[i].DCrtC = (ht);
+N         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME3, sizeof(ht), &ht, EC_TIMEOUTRET);
+X         (void)ecx_FPRD(context->port, slaveh, ECT_REG_DCTIME3, sizeof(ht), &ht, 2000);
+N         context->slavelist[i].DCrtD = etohl(ht);
+X         context->slavelist[i].DCrtD = (ht);
+N
+N         /* make list of active ports and their time stamps */
+N         nlist = 0;
+N         if (context->slavelist[i].activeports & PORTM0) 
+X         if (context->slavelist[i].activeports & 0x01) 
+N         {
+N            plist[nlist] = 0;
+N            tlist[nlist] = context->slavelist[i].DCrtA;
+N            nlist++;
+N         }
+N         if (context->slavelist[i].activeports & PORTM3) 
+X         if (context->slavelist[i].activeports & 0x08) 
+N         {
+N            plist[nlist] = 3;
+N            tlist[nlist] = context->slavelist[i].DCrtD;
+N            nlist++;
+N         }
+N         if (context->slavelist[i].activeports & PORTM1) 
+X         if (context->slavelist[i].activeports & 0x02) 
+N         {
+N            plist[nlist] = 1;
+N            tlist[nlist] = context->slavelist[i].DCrtB;
+N            nlist++;
+N         }
+N         if (context->slavelist[i].activeports & PORTM2) 
+X         if (context->slavelist[i].activeports & 0x04) 
+N         {
+N            plist[nlist] = 2;
+N            tlist[nlist] = context->slavelist[i].DCrtC;
+N            nlist++;
+N         }
+N         /* entryport is port with the lowest timestamp */
+N         entryport = 0;
+N         if((nlist > 1) && (tlist[1] < tlist[entryport]))
+N         {
+N            entryport = 1;
+N         }         
+N         if((nlist > 2) && (tlist[2] < tlist[entryport]))
+N         {
+N            entryport = 2;
+N         }
+N         if((nlist > 3) && (tlist[3] < tlist[entryport]))
+N         {
+N            entryport = 3;
+N         }
+N         entryport = plist[entryport];
+N         context->slavelist[i].entryport = entryport;
+N         /* consume entryport from activeports */
+N         context->slavelist[i].consumedports &= (uint8)~(1 << entryport);
+N
+N         /* finding DC parent of current */
+N         parent = i;
+N         do
+N         {
+N            child = parent;
+N            parent = context->slavelist[parent].parent;
+N         }
+N         while (!((parent == 0) || (context->slavelist[parent].hasdc)));
+N         /* only calculate propagation delay if slave is not the first */
+N         if (parent > 0)
+N         {
+N            /* find port on parent this slave is connected to */
+N            context->slavelist[i].parentport = ecx_parentport(context, parent);
+N            if (context->slavelist[parent].topology == 1)
+N            {
+N               context->slavelist[i].parentport = context->slavelist[parent].entryport;
+N            }
+N
+N            dt1 = 0;
+N            dt2 = 0;
+N            /* delta time of (parentport - 1) - parentport */
+N            /* note: order of ports is 0 - 3 - 1 -2 */
+N            /* non active ports are skipped */
+N            dt3 = ecx_porttime(context, parent, context->slavelist[i].parentport) -
+N                  ecx_porttime(context, parent, 
+N                    ecx_prevport(context, parent, context->slavelist[i].parentport));
+N            /* current slave has children */
+N            /* those childrens delays need to be substacted */
+N            if (context->slavelist[i].topology > 1)
+N            {
+N               dt1 = ecx_porttime(context, i, 
+N                        ecx_prevport(context, i, context->slavelist[i].entryport)) -
+N                     ecx_porttime(context, i, context->slavelist[i].entryport);
+N            }
+N            /* we are only interrested in positive diference */
+N            if (dt1 > dt3) dt1 = -dt1;
+N            /* current slave is not the first child of parent */
+N            /* previous childs delays need to be added */
+N            if ((child - parent) > 1)
+N            {
+N               dt2 = ecx_porttime(context, parent, 
+N                        ecx_prevport(context, parent, context->slavelist[i].parentport)) -
+N                     ecx_porttime(context, parent, context->slavelist[parent].entryport);
+N            }
+N            if (dt2 < 0) dt2 = -dt2;
+N
+N            /* calculate current slave delay from delta times */
+N            /* assumption : forward delay equals return delay */
+N            context->slavelist[i].pdelay = ((dt3 - dt1) / 2) + dt2 +
+N               context->slavelist[parent].pdelay;
+N            ht = htoel(context->slavelist[i].pdelay);
+X            ht = (context->slavelist[i]. pdelay);
+N            /* write propagation delay*/
+N            (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYSDELAY, sizeof(ht), &ht, EC_TIMEOUTRET);
+X            (void)ecx_FPWR(context->port, slaveh, ECT_REG_DCSYSDELAY, sizeof(ht), &ht, 2000);
+N         }
+N      }
+N      else
+N      {
+N         context->slavelist[i].DCrtA = 0;
+N         context->slavelist[i].DCrtB = 0;
+N         context->slavelist[i].DCrtC = 0;
+N         context->slavelist[i].DCrtD = 0;
+N         parent = context->slavelist[i].parent;
+N         /* if non DC slave found on first position on branch hold root parent */
+N         if ( (parent > 0) && (context->slavelist[parent].topology > 2))
+N            parenthold = parent;
+N         /* if branch has no DC slaves consume port on root parent */
+N         if ( parenthold && (context->slavelist[i].topology == 1))
+N         {
+N            ecx_parentport(context, parenthold);
+N            parenthold = 0;
+N         }
+N      }
+N   }
+N
+N   return context->slavelist[0].hasdc;
+N}
+N
+N#ifdef EC_VER1
+Nvoid ec_dcsync0(uint16 slave, boolean act, uint32 CyclTime, uint32 CyclShift)
+N{
+N   ecx_dcsync0(&ecx_context, slave, act, CyclTime* 1000, CyclShift);
+N}
+N
+Nvoid ec_dcsync01(uint16 slave, boolean act, uint32 CyclTime0, uint32 CyclTime1, uint32 CyclShift)
+N{
+N   ecx_dcsync01(&ecx_context, slave, act, CyclTime0, CyclTime1, CyclShift);
+N}
+N
+Nboolean ec_configdc(void)
+N{
+N   return ecx_configdc(&ecx_context);
+N}
+N#endif

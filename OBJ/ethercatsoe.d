@@ -1,0 +1,9 @@
+..\obj\ethercatsoe.o: ..\ETHERCAT\ethercatsoe.c
+..\obj\ethercatsoe.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+..\obj\ethercatsoe.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+..\obj\ethercatsoe.o: ..\ETHERCAT\osal.h
+..\obj\ethercatsoe.o: ..\ETHERCAT\osal_defs.h
+..\obj\ethercatsoe.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+..\obj\ethercatsoe.o: ..\ETHERCAT\oshw.h
+..\obj\ethercatsoe.o: ..\ETHERCAT\ethercattype.h
+..\obj\ethercatsoe.o: ..\ETHERCAT\nicdrv.h

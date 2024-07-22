@@ -1,0 +1,229 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.24.2.0
+Copyright (C) 2017 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: chen Ian, zzebra, LIC=HN0AE-55J53-30XNC-7PU8H-FA8NA-16DD2
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.24.1
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 5 (build 528)
+Assembler:       Armasm.exe V5.06 update 5 (build 528)
+Linker/Locator:  ArmLink.exe V5.06 update 5 (build 528)
+Library Manager: ArmAr.exe V5.06 update 5 (build 528)
+Hex Converter:   FromElf.exe V5.06 update 5 (build 528)
+CPU DLL:         SARMCM3.DLL V5.24.1
+Dialog DLL:      DCM.DLL V1.16.0.0
+Target DLL:      Segger\JL2CM3.dll V2.99.26.0
+Dialog DLL:      TCM.DLL V1.32.0.0
+ 
+<h2>Project:</h2>
+D:\ethercat\Material\1-Ö÷Õ¾¿ª·¢°å\EtherCAT-Master-Board-MOTRO\Èí¼þ\Ethercat Master Control_FREERUN - DC\USER\LWIP.uvprojx
+Project File Date:  07/22/2024
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Rebuild target 'LWIP'
+compiling ethercatbase.c...
+..\ETHERCAT\ethercatbase.c(669): warning:  #1-D: last line of file ends without a newline
+  #endif
+..\ETHERCAT\ethercatbase.c: 1 warning, 0 errors
+compiling ethercatcoe.c...
+compiling ethercatprint.c...
+compiling ethercatdc.c...
+..\ETHERCAT\ethercatdc.h(64): warning:  #1295-D: Deprecated declaration ec_configdc - give arg types
+  boolean ec_configdc();
+..\ETHERCAT\ethercatdc.c: 1 warning, 0 errors
+assembling startup_stm32f40_41xxx.s...
+compiling system_stm32f4xx.c...
+stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+system_stm32f4xx.c: 1 warning, 0 errors
+compiling bsp.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\HARDWARE\bsp.c: 1 warning, 0 errors
+compiling bsp_timer.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\HARDWARE\bsp_timer.c(50): warning:  #177-D: variable "NVIC_InitStructure"  was declared but never referenced
+  	NVIC_InitTypeDef NVIC_InitStructure;
+..\HARDWARE\bsp_timer.c(96): warning:  #1-D: last line of file ends without a newline
+  }
+..\HARDWARE\bsp_timer.c: 3 warnings, 0 errors
+compiling stm32f4xx_it.c...
+stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+stm32f4xx_it.c(175): warning:  #1-D: last line of file ends without a newline
+  /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+stm32f4xx_it.c: 2 warnings, 0 errors
+compiling rtc.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\HARDWARE\RTC\rtc.c: 1 warning, 0 errors
+compiling DM9162.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\HARDWARE\ETHERNET\DM9162.c(223): warning:  #177-D: variable "l"  was declared but never referenced
+  		int l =0;
+..\HARDWARE\ETHERNET\DM9162.c: 2 warnings, 0 errors
+compiling sram.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\HARDWARE\SRAM\sram.c: 1 warning, 0 errors
+compiling Ethercat_Master.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\ETHERCAT\ethercatdc.h(64): warning:  #1295-D: Deprecated declaration ec_configdc - give arg types
+  boolean ec_configdc();
+..\ETHERCAT\Ethercat_Master.c(70): warning:  #223-D: function "bsp_Init" declared implicitly
+  		bsp_Init(); /*IOï¿½Ú³ï¿½Ê¼ï¿½ï¿½ */
+..\ETHERCAT\Ethercat_Master.c(103): warning:  #223-D: function "bsp_LedToggle" declared implicitly
+  			  bsp_LedToggle(2);    /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?		*/
+..\ETHERCAT\Ethercat_Master.c(112): warning:  #223-D: function "bsp_LedOff" declared implicitly
+  			bsp_LedOff(2);  /* ï¿½ï¿½ï¿½LEDï¿½ï¿½ï¿½ï¿½ï¿? */
+..\ETHERCAT\Ethercat_Master.c(119): warning:  #223-D: function "bsp_LedOn" declared implicitly
+        bsp_LedOn(1);   /*  Run ï¿½Æµï¿½ï¿½ï¿½	 */
+..\ETHERCAT\Ethercat_Master.c(67): warning:  #177-D: variable "u8val"  was declared but never referenced
+  	  uint8 u8val;
+..\ETHERCAT\Ethercat_Master.c(68): warning:  #177-D: variable "u16val"  was declared but never referenced
+  	  uint16 u16val;
+..\ETHERCAT\Ethercat_Master.c(309): warning:  #1-D: last line of file ends without a newline
+  }
+..\ETHERCAT\Ethercat_Master.c: 9 warnings, 0 errors
+compiling DM9000.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\HARDWARE\ETHERNET\DM9000.c(92): warning:  #177-D: variable "EXTI_InitStructure"  was declared but never referenced
+    EXTI_InitTypeDef EXTI_InitStructure;
+..\HARDWARE\ETHERNET\DM9000.c(93): warning:  #177-D: variable "NVIC_InitStructure"  was declared but never referenced
+    NVIC_InitTypeDef NVIC_InitStructure;
+..\HARDWARE\ETHERNET\DM9000.c(490): warning:  #177-D: variable "temp"  was declared but never referenced
+  	uint16_t temp;
+..\HARDWARE\ETHERNET\DM9000.c: 4 warnings, 0 errors
+compiling ethercatmain.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\ETHERCAT\ethercatmain.c(1307): warning:  #177-D: function "ecx_clearindex"  was declared but never referenced
+  static void ecx_clearindex(ecx_contextt *context)  {
+..\ETHERCAT\ethercatmain.c(1325): warning:  #177-D: function "ecx_main_send_processdata"  was declared but never referenced
+  static int ecx_main_send_processdata(ecx_contextt *context, uint8 group, boolean use_overlap_io)
+..\ETHERCAT\ethercatmain.c: 3 warnings, 0 errors
+compiling misc.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\misc.c: 1 warning, 0 errors
+compiling nicdrv.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\ETHERCAT\nicdrv.c(372): warning:  #177-D: variable "temp"  was declared but never referenced
+  	 uint16 temp;
+..\ETHERCAT\nicdrv.c: 2 warnings, 0 errors
+compiling stm32f4xx_gpio.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_gpio.c: 1 warning, 0 errors
+compiling stm32f4xx_syscfg.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_syscfg.c: 1 warning, 0 errors
+compiling ethercatconfig.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\ETHERCAT\ethercatconfig.c(89): warning:  #1000-D: a storage class may not be specified here
+  extern enum
+..\ETHERCAT\ethercatconfig.c(366): warning:  #177-D: variable "w"  was declared but never referenced
+  	 uint16 w;
+..\ETHERCAT\ethercatconfig.c(369): warning:  #177-D: variable "i"  was declared but never referenced
+  	 uint8 i;
+..\ETHERCAT\ethercatconfig.c(1116): warning:  #177-D: variable "w"  was declared but never referenced
+  	 uint16 w;
+..\ETHERCAT\ethercatconfig.c(1248): warning:  #177-D: variable "thrn"  was declared but never referenced
+     int thrn, thrc;
+..\ETHERCAT\ethercatconfig.c(1248): warning:  #177-D: variable "thrc"  was declared but never referenced
+     int thrn, thrc;
+..\ETHERCAT\ethercatconfig.c(680): warning:  #177-D: function "ecx_map_coe_soe"  was declared but never referenced
+  static int ecx_map_coe_soe(ecx_contextt *context, uint16 slave, int thread_n)
+..\ETHERCAT\ethercatconfig.c(839): warning:  #177-D: function "ecx_config_create_input_mappings"  was declared but never referenced
+  static void ecx_config_create_input_mappings(ecx_contextt *context, void *pIOmap, 
+..\ETHERCAT\ethercatconfig.c(977): warning:  #177-D: function "ecx_config_create_output_mappings"  was declared but never referenced
+  static void ecx_config_create_output_mappings(ecx_contextt *context, void *pIOmap, 
+..\ETHERCAT\ethercatconfig.c: 10 warnings, 0 errors
+compiling stm32f4xx_rcc.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_rcc.c: 1 warning, 0 errors
+compiling stm32f4xx_usart.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_usart.c: 1 warning, 0 errors
+compiling stm32f4xx_tim.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_tim.c: 1 warning, 0 errors
+compiling stm32f4xx_adc.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_adc.c: 1 warning, 0 errors
+compiling stm32f4xx_fsmc.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_fsmc.c: 1 warning, 0 errors
+compiling stm32f4x7_eth.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4x7_ETH_Driver\src\stm32f4x7_eth.c: 1 warning, 0 errors
+compiling stm32f4xx_exti.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_exti.c: 1 warning, 0 errors
+compiling usart.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\SYSTEM\usart\usart.c(8): error:  #20: identifier "FIFO_TypeDef" is undefined
+  extern FIFO_TypeDef *FifoIn1;
+..\SYSTEM\usart\usart.c(9): error:  #20: identifier "FIFO_TypeDef" is undefined
+  extern FIFO_TypeDef *FifoOut1;
+..\SYSTEM\usart\usart.c(28): warning:  #177-D: variable "NVIC_InitStructure"  was declared but never referenced
+      NVIC_InitTypeDef NVIC_InitStructure;
+..\SYSTEM\usart\usart.c(75): warning:  #223-D: function "Fifo_Insert" declared implicitly
+          Fifo_Insert(FifoIn1, 1, (void *)&Data);
+..\SYSTEM\usart\usart.c(92): warning:  #223-D: function "Fifo_Used" declared implicitly
+          uint32_t Used = Fifo_Used(FifoOut1);
+..\SYSTEM\usart\usart.c(98): warning:  #223-D: function "Fifo_Extract" declared implicitly
+              if (Fifo_Extract(FifoOut1, 1, (void *)&Data))
+..\SYSTEM\usart\usart.c: 5 warnings, 2 errors
+compiling stm32f4xx_rtc.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_rtc.c: 1 warning, 0 errors
+compiling sys.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\SYSTEM\sys\sys.c: 1 warning, 0 errors
+compiling stm32f4xx_pwr.c...
+..\USER\stm32f4xx.h(88): warning:  #47-D: incompatible redefinition of macro "STM32F40_41xxx" 
+    #define STM32F40_41xxx
+..\FWLIB\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_pwr.c: 1 warning, 0 errors
+"..\OBJ\LWIP.axf" - 2 Error(s), 59 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: Keil
+                http://www.keil.com/pack/Keil.STM32F4xx_DFP.2.15.0.pack
+                Keil.STM32F4xx_DFP.2.15.0
+                STMicroelectronics STM32F4 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_LWIP
+  C:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.15.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include
+
+<h2>Collection of Component Files used:</h2>
+Target not created.
+Build Time Elapsed:  00:00:02
+</pre>
+</body>
+</html>

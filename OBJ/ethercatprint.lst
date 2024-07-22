@@ -1,0 +1,3165 @@
+L 1 "..\ETHERCAT\ethercatprint.c"
+N/*
+N * Licensed under the GNU General Public License version 2 with exceptions. See
+N * LICENSE file in the project root for full license information
+N */
+N
+N/** \file
+N * \brief
+N * Module to convert EtherCAT errors to readable messages.
+N *
+N * SDO abort messages and AL status codes are used to relay slave errors to
+N * the user application. This module converts the binary codes to readble text.
+N * For the defined error codes see the EtherCAT protocol documentation.
+N */
+N
+N#include <stdio.h>
+L 1 "C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h" 1
+N/* stdio.h: ANSI 'C' (X3J11 Oct 88) library header, section 4.9 */
+N/* Copyright (C) Codemist Ltd., 1988-1993                       */
+N/* Copyright 1991-1998 ARM Limited. All rights reserved.        */
+N
+N/*
+N * RCS $Revision$
+N * Checkin $Date$
+N * Revising $Author: sdouglas $
+N */
+N
+N/*
+N * stdio.h declares two types, several macros, and many functions for
+N * performing input and output. For a discussion on Streams and Files
+N * refer to sections 4.9.2 and 4.9.3 in the above ANSI draft, or to a
+N * modern textbook on C.
+N */
+N
+N#ifndef __stdio_h
+N#define __stdio_h
+N#define __ARMCLIB_VERSION 5060034
+N
+N/*
+N * Depending on compiler version __int64 or __INT64_TYPE__ should be defined.
+N */
+N#ifndef __int64
+N  #ifdef __INT64_TYPE__
+S    #define __int64 __INT64_TYPE__
+N  #endif
+N  /* On some architectures neither of these may be defined - if so, fall
+N     through and error out if used. */
+N#endif
+N
+N
+N#define _ARMABI __declspec(__nothrow)
+N
+N  #ifndef __STDIO_DECLS
+N  #define __STDIO_DECLS
+N
+N    #undef __CLIBNS
+N    #ifdef __cplusplus
+S      namespace std {
+S      #define __CLIBNS ::std::
+S        extern "C" {
+N    #else /* ndef __cplusplus */
+N      #define __CLIBNS
+N    #endif /* ndef __cplusplus */
+N
+N#if defined(__cplusplus) || !defined(__STRICT_ANSI__) || !defined(__size_t)
+X#if 0L || !0L || !0L
+N /* always defined in C++ and non-strict C for consistency of debug info */
+N  #if __sizeof_ptr == 8
+X  #if 4 == 8
+S    typedef unsigned long size_t;   /* see <stddef.h> */
+N  #else
+N    typedef unsigned int size_t;   /* see <stddef.h> */
+N  #endif
+N  #if !defined(__cplusplus) && defined(__STRICT_ANSI__)
+X  #if !0L && 0L
+S    #define __size_t 1
+N  #endif
+N#endif
+N
+N#undef NULL
+N#define NULL 0                   /* see <stddef.h> */
+N
+N/* ANSI forbids va_list to be defined here */
+N/* keep in step with <stdarg.h> and <wchar.h> */
+N#if !defined(__va_list) && (defined(__cplusplus) || !defined(__STRICT_ANSI__) || !defined(__va_list_defined))
+X#if !0L && (0L || !0L || !0L)
+N/* always defined in C++ and non-strict C for consistency of debug info */
+N  #ifdef __clang__
+S    typedef __builtin_va_list __va_list;
+N  #else
+N    typedef struct __va_list __va_list;
+N  #endif
+N  #if !defined(__cplusplus) && defined(__STRICT_ANSI__)
+X  #if !0L && 0L
+S    #define __va_list_defined 1
+N  #endif
+N#endif
+N
+N   /*
+N    * If the compiler supports signalling nans as per N965 then it
+N    * will define __SUPPORT_SNAN__, in which case a user may define
+N    * _WANT_SNAN in order to obtain compliant versions of the printf
+N    * and scanf families of functions
+N    */
+N#if defined(__SUPPORT_SNAN__) && defined(_WANT_SNAN)
+X#if 0L && 0L
+S#pragma import(__use_snan)
+N#endif
+N
+Ntypedef struct __fpos_t_struct {
+N    unsigned __int64 __pos;
+N    /*
+N     * this structure is equivalent to an mbstate_t, but we're not
+N     * allowed to actually define the type name `mbstate_t' within
+N     * stdio.h
+N     */
+N    struct {
+N        unsigned int __state1, __state2;
+N    } __mbstate;
+N} fpos_t;
+N   /*
+N    * fpos_t is an object capable of recording all information needed to
+N    * specify uniquely every position within a file.
+N    */
+N
+N#define _SYS_OPEN 16
+N   /* _SYS_OPEN defines a limit on the number of open files that is imposed
+N    * by this C library
+N    */
+N
+Ntypedef struct __FILE FILE;
+N   /*
+N    * FILE is an object capable of recording all information needed to control
+N    * a stream, such as its file position indicator, a pointer to its
+N    * associated buffer, an error indicator that records whether a read/write
+N    * error has occurred and an end-of-file indicator that records whether the
+N    * end-of-file has been reached.
+N    * Its structure is not made known to library clients.
+N    */
+N
+N#if defined(__STRICT_ANSI__) && !__FILE_INCOMPLETE
+X#if 0L && !__FILE_INCOMPLETE
+Sstruct __FILE {
+S    union {
+S        long __FILE_alignment;
+S#ifdef __TARGET_ARCH_AARCH64
+S        char __FILE_size[136];
+S#else /* __TARGET_ARCH_AARCH64 */
+S        char __FILE_size[84];
+S#endif /* __TARGET_ARCH_AARCH64 */
+S    } __FILE_opaque;
+S};
+S    /*
+S     * FILE must be an object type (C99 - 7.19.1) and an object type fully
+S     * describes an object [including its static size] (C99 - 6.2.5).
+S     * This definition is a placeholder which matches the struct __FILE in
+S     * size and alignment as used internally by libc.
+S     */
+N#endif
+N
+N
+Nextern FILE __stdin, __stdout, __stderr;
+Nextern FILE *__aeabi_stdin, *__aeabi_stdout, *__aeabi_stderr;
+N
+N#if _AEABI_PORTABILITY_LEVEL != 0 || (!defined _AEABI_PORTABILITY_LEVEL && __DEFAULT_AEABI_PORTABILITY_LEVEL != 0)
+X#if _AEABI_PORTABILITY_LEVEL != 0 || (!0L && __DEFAULT_AEABI_PORTABILITY_LEVEL != 0)
+S#define stdin  (__CLIBNS __aeabi_stdin)
+S   /* pointer to a FILE object associated with standard input stream */
+S#define stdout (__CLIBNS __aeabi_stdout)
+S   /* pointer to a FILE object associated with standard output stream */
+S#define stderr (__CLIBNS __aeabi_stderr)
+S   /* pointer to a FILE object associated with standard error stream */
+Sextern const int __aeabi_IOFBF;
+S#define _IOFBF (__CLIBNS __aeabi_IOFBF)
+Sextern const int __aeabi_IONBF;
+S#define _IONBF (__CLIBNS __aeabi_IONBF)
+Sextern const int __aeabi_IOLBF;
+S#define _IOLBF (__CLIBNS __aeabi_IOLBF)
+Sextern const int __aeabi_BUFSIZ;
+S#define BUFSIZ (__CLIBNS __aeabi_BUFSIZ)
+Sextern const int __aeabi_FOPEN_MAX;
+S#define FOPEN_MAX (__CLIBNS __aeabi_FOPEN_MAX)
+Sextern const int __aeabi_TMP_MAX;
+S#define TMP_MAX (__CLIBNS __aeabi_TMP_MAX)
+Sextern const int __aeabi_FILENAME_MAX;
+S#define FILENAME_MAX (__CLIBNS __aeabi_FILENAME_MAX)
+Sextern const int __aeabi_L_tmpnam;
+S#define L_tmpnam (__CLIBNS __aeabi_L_tmpnam)
+N#else
+N#define stdin  (&__CLIBNS __stdin)
+N   /* pointer to a FILE object associated with standard input stream */
+N#define stdout (&__CLIBNS __stdout)
+N   /* pointer to a FILE object associated with standard output stream */
+N#define stderr (&__CLIBNS __stderr)
+N   /* pointer to a FILE object associated with standard error stream */
+N
+N#define _IOFBF           0x100 /* fully buffered IO */
+N#define _IOLBF           0x200 /* line buffered IO */
+N#define _IONBF           0x400 /* unbuffered IO */
+N
+N    /* Various default file IO buffer sizes */
+N#define BUFSIZ       (512)  /* system buffer size (as used by setbuf) */
+N
+N#define FOPEN_MAX _SYS_OPEN
+N   /*
+N    * an integral constant expression that is the minimum number of files that
+N    * this implementation guarantees can be open simultaneously.
+N    */
+N
+N#define FILENAME_MAX 256
+N   /*
+N    * an integral constant expression that is the size of an array of char
+N    * large enough to hold the longest filename string
+N    */
+N#define L_tmpnam FILENAME_MAX
+N   /*
+N    * an integral constant expression that is the size of an array of char
+N    * large enough to hold a temporary file name string generated by the
+N    * tmpnam function.
+N    */
+N#define TMP_MAX 256
+N   /*
+N    * an integral constant expression that is the minimum number of unique
+N    * file names that shall be generated by the tmpnam function.
+N    */
+N
+N#endif
+N
+N#define EOF      (-1)
+N   /*
+N    * negative integral constant, indicates end-of-file, that is, no more input
+N    * from a stream.
+N    */
+N
+N#define SEEK_SET 0 /* start of stream (see fseek) */
+N#define SEEK_CUR 1 /* current position in stream (see fseek) */
+N#define SEEK_END 2 /* end of stream (see fseek) */
+N
+N    /*
+N     * _IOBIN is the flag passed to _sys_write to denote a binary
+N     * file.
+N     */
+N#define _IOBIN            0x04     /* binary stream */
+N
+N#define __STDIN_BUFSIZ  (64)  /* default stdin buffer size */
+N#define __STDOUT_BUFSIZ (64)  /* default stdout buffer size */
+N#define __STDERR_BUFSIZ (16)  /* default stderr buffer size */
+N
+Nextern _ARMABI int remove(const char * /*filename*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int remove(const char *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * causes the file whose name is the string pointed to by filename to be
+N    * removed. Subsequent attempts to open the file will fail, unless it is
+N    * created anew. If the file is open, the behaviour of the remove function
+N    * is implementation-defined.
+N    * Returns: zero if the operation succeeds, nonzero if it fails.
+N    */
+Nextern _ARMABI int rename(const char * /*old*/, const char * /*new*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int rename(const char *  , const char *  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * causes the file whose name is the string pointed to by old to be
+N    * henceforth known by the name given by the string pointed to by new. The
+N    * file named old is effectively removed. If a file named by the string
+N    * pointed to by new exists prior to the call of the rename function, the
+N    * behaviour is implementation-defined.
+N    * Returns: zero if the operation succeeds, nonzero if it fails, in which
+N    *          case if the file existed previously it is still known by its
+N    *          original name.
+N    */
+Nextern _ARMABI FILE *tmpfile(void);
+Xextern __declspec(__nothrow) FILE *tmpfile(void);
+N   /*
+N    * creates a temporary binary file that will be automatically removed when
+N    * it is closed or at program termination. The file is opened for update.
+N    * Returns: a pointer to the stream of the file that it created. If the file
+N    *          cannot be created, a null pointer is returned.
+N    */
+Nextern _ARMABI char *tmpnam(char * /*s*/);
+Xextern __declspec(__nothrow) char *tmpnam(char *  );
+N   /*
+N    * generates a string that is not the same as the name of an existing file.
+N    * The tmpnam function generates a different string each time it is called,
+N    * up to TMP_MAX times. If it is called more than TMP_MAX times, the
+N    * behaviour is implementation-defined.
+N    * Returns: If the argument is a null pointer, the tmpnam function leaves
+N    *          its result in an internal static object and returns a pointer to
+N    *          that object. Subsequent calls to the tmpnam function may modify
+N    *          the same object. if the argument is not a null pointer, it is
+N    *          assumed to point to an array of at least L_tmpnam characters;
+N    *          the tmpnam function writes its result in that array and returns
+N    *          the argument as its value.
+N    */
+N
+Nextern _ARMABI int fclose(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int fclose(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * causes the stream pointed to by stream to be flushed and the associated
+N    * file to be closed. Any unwritten buffered data for the stream are
+N    * delivered to the host environment to be written to the file; any unread
+N    * buffered data are discarded. The stream is disassociated from the file.
+N    * If the associated buffer was automatically allocated, it is deallocated.
+N    * Returns: zero if the stream was succesfully closed, or nonzero if any
+N    *          errors were detected or if the stream was already closed.
+N    */
+Nextern _ARMABI int fflush(FILE * /*stream*/);
+Xextern __declspec(__nothrow) int fflush(FILE *  );
+N   /*
+N    * If the stream points to an output or update stream in which the most
+N    * recent operation was output, the fflush function causes any unwritten
+N    * data for that stream to be delivered to the host environment to be
+N    * written to the file. If the stream points to an input or update stream,
+N    * the fflush function undoes the effect of any preceding ungetc operation
+N    * on the stream.
+N    * Returns: nonzero if a write error occurs.
+N    */
+Nextern _ARMABI FILE *fopen(const char * __restrict /*filename*/,
+Xextern __declspec(__nothrow) FILE *fopen(const char * __restrict  ,
+N                           const char * __restrict /*mode*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * opens the file whose name is the string pointed to by filename, and
+N    * associates a stream with it.
+N    * The argument mode points to a string beginning with one of the following
+N    * sequences:
+N    * "r"         open text file for reading
+N    * "w"         create text file for writing, or truncate to zero length
+N    * "a"         append; open text file or create for writing at eof
+N    * "rb"        open binary file for reading
+N    * "wb"        create binary file for writing, or truncate to zero length
+N    * "ab"        append; open binary file or create for writing at eof
+N    * "r+"        open text file for update (reading and writing)
+N    * "w+"        create text file for update, or truncate to zero length
+N    * "a+"        append; open text file or create for update, writing at eof
+N    * "r+b"/"rb+" open binary file for update (reading and writing)
+N    * "w+b"/"wb+" create binary file for update, or truncate to zero length
+N    * "a+b"/"ab+" append; open binary file or create for update, writing at eof
+N    *
+N    * Opening a file with read mode ('r' as the first character in the mode
+N    * argument) fails if the file does not exist or cannot be read.
+N    * Opening a file with append mode ('a' as the first character in the mode
+N    * argument) causes all subsequent writes to be forced to the current end of
+N    * file, regardless of intervening calls to the fseek function. In some
+N    * implementations, opening a binary file with append mode ('b' as the
+N    * second or third character in the mode argument) may initially position
+N    * the file position indicator beyond the last data written, because of the
+N    * NUL padding.
+N    * When a file is opened with update mode ('+' as the second or third
+N    * character in the mode argument), both input and output may be performed
+N    * on the associated stream. However, output may not be directly followed
+N    * by input without an intervening call to the fflush fuction or to a file
+N    * positioning function (fseek, fsetpos, or rewind), and input be not be
+N    * directly followed by output without an intervening call to the fflush
+N    * fuction or to a file positioning function, unless the input operation
+N    * encounters end-of-file. Opening a file with update mode may open or
+N    * create a binary stream in some implementations. When opened, a stream
+N    * is fully buffered if and only if it does not refer to an interactive
+N    * device. The error and end-of-file indicators for the stream are
+N    * cleared.
+N    * Returns: a pointer to the object controlling the stream. If the open
+N    *          operation fails, fopen returns a null pointer.
+N    */
+Nextern _ARMABI FILE *freopen(const char * __restrict /*filename*/,
+Xextern __declspec(__nothrow) FILE *freopen(const char * __restrict  ,
+N                    const char * __restrict /*mode*/,
+N                    FILE * __restrict /*stream*/) __attribute__((__nonnull__(2,3)));
+N   /*
+N    * opens the file whose name is the string pointed to by filename and
+N    * associates the stream pointed to by stream with it. The mode argument is
+N    * used just as in the fopen function.
+N    * The freopen function first attempts to close any file that is associated
+N    * with the specified stream. Failure to close the file successfully is
+N    * ignored. The error and end-of-file indicators for the stream are cleared.
+N    * Returns: a null pointer if the operation fails. Otherwise, freopen
+N    *          returns the value of the stream.
+N    */
+Nextern _ARMABI void setbuf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) void setbuf(FILE * __restrict  ,
+N                    char * __restrict /*buf*/) __attribute__((__nonnull__(1)));
+N   /*
+N    * Except that it returns no value, the setbuf function is equivalent to the
+N    * setvbuf function invoked with the values _IOFBF for mode and BUFSIZ for
+N    * size, or (if buf is a null pointer), with the value _IONBF for mode.
+N    * Returns: no value.
+N    */
+Nextern _ARMABI int setvbuf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int setvbuf(FILE * __restrict  ,
+N                   char * __restrict /*buf*/,
+N                   int /*mode*/, size_t /*size*/) __attribute__((__nonnull__(1)));
+N   /*
+N    * may be used after the stream pointed to by stream has been associated
+N    * with an open file but before it is read or written. The argument mode
+N    * determines how stream will be buffered, as follows: _IOFBF causes
+N    * input/output to be fully buffered; _IOLBF causes output to be line
+N    * buffered (the buffer will be flushed when a new-line character is
+N    * written, when the buffer is full, or when input is requested); _IONBF
+N    * causes input/output to be completely unbuffered. If buf is not the null
+N    * pointer, the array it points to may be used instead of an automatically
+N    * allocated buffer (the buffer must have a lifetime at least as great as
+N    * the open stream, so the stream should be closed before a buffer that has
+N    * automatic storage duration is deallocated upon block exit). The argument
+N    * size specifies the size of the array. The contents of the array at any
+N    * time are indeterminate.
+N    * Returns: zero on success, or nonzero if an invalid value is given for
+N    *          mode or size, or if the request cannot be honoured.
+N    */
+N#pragma __printf_args
+Nextern _ARMABI int fprintf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int fprintf(FILE * __restrict  ,
+N                    const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * writes output to the stream pointed to by stream, under control of the
+N    * string pointed to by format that specifies how subsequent arguments are
+N    * converted for output. If there are insufficient arguments for the format,
+N    * the behaviour is undefined. If the format is exhausted while arguments
+N    * remain, the excess arguments are evaluated but otherwise ignored. The
+N    * fprintf function returns when the end of the format string is reached.
+N    * The format shall be a multibyte character sequence, beginning and ending
+N    * in its initial shift state. The format is composed of zero or more
+N    * directives: ordinary multibyte characters (not %), which are copied
+N    * unchanged to the output stream; and conversion specifiers, each of which
+N    * results in fetching zero or more subsequent arguments. Each conversion
+N    * specification is introduced by the character %. For a description of the
+N    * available conversion specifiers refer to section 4.9.6.1 in the ANSI
+N    * draft mentioned at the start of this file or to any modern textbook on C.
+N    * The minimum value for the maximum number of characters producable by any
+N    * single conversion is at least 509.
+N    * Returns: the number of characters transmitted, or a negative value if an
+N    *          output error occurred.
+N    */
+N#pragma __printf_args
+Nextern _ARMABI int _fprintf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int _fprintf(FILE * __restrict  ,
+N                     const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to fprintf, but does not support floating-point formats.
+N    * You can use instead of fprintf to improve code size.
+N    * Returns: as fprintf.
+N    */
+N#pragma __printf_args
+Nextern _ARMABI int printf(const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int printf(const char * __restrict  , ...) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to fprintf with the argument stdout interposed before the
+N    * arguments to printf.
+N    * Returns: the number of characters transmitted, or a negative value if an
+N    *          output error occurred.
+N    */
+N#pragma __printf_args
+Nextern _ARMABI int _printf(const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int _printf(const char * __restrict  , ...) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to printf, but does not support floating-point formats.
+N    * You can use instead of printf to improve code size.
+N    * Returns: as printf.
+N    */
+N#pragma __printf_args
+Nextern _ARMABI int sprintf(char * __restrict /*s*/, const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int sprintf(char * __restrict  , const char * __restrict  , ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to fprintf, except that the argument s specifies an array
+N    * into which the generated output is to be written, rather than to a
+N    * stream. A null character is written at the end of the characters written;
+N    * it is not counted as part of the returned sum.
+N    * Returns: the number of characters written to the array, not counting the
+N    *          terminating null character.
+N    */
+N#pragma __printf_args
+Nextern _ARMABI int _sprintf(char * __restrict /*s*/, const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int _sprintf(char * __restrict  , const char * __restrict  , ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to sprintf, but does not support floating-point formats.
+N    * You can use instead of sprintf to improve code size.
+N    * Returns: as sprintf.
+N    */
+N
+N#pragma __printf_args
+Nextern _ARMABI int __ARM_snprintf(char * __restrict /*s*/, size_t /*n*/,
+Xextern __declspec(__nothrow) int __ARM_snprintf(char * __restrict  , size_t  ,
+N                     const char * __restrict /*format*/, ...) __attribute__((__nonnull__(3)));
+N
+N#if !defined(__STRICT_ANSI__) || (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__) || (defined(__cplusplus) && 201103L <= __cplusplus)
+X#if !0L || (1L && 199901L <= 199409L) || (0L && 201103L <= __cplusplus)
+N#pragma __printf_args
+Nextern _ARMABI int snprintf(char * __restrict /*s*/, size_t /*n*/,
+Xextern __declspec(__nothrow) int snprintf(char * __restrict  , size_t  ,
+N                     const char * __restrict /*format*/, ...) __attribute__((__nonnull__(3)));
+N   /*
+N    * is equivalent to fprintf, except that the argument s specifies an array
+N    * into which the generated output is to be written, rather than to a
+N    * stream. The argument n specifies the size of the output array, so as to
+N    * avoid overflowing the buffer.
+N    * A null character is written at the end of the characters written, even
+N    * if the formatting was not completed; it is not counted as part of the
+N    * returned sum. At most n characters of the output buffer are used,
+N    * _including_ the null character.
+N    * Returns: the number of characters that would have been written to the
+N    *          array, not counting the terminating null character, if the
+N    *          array had been big enough. So if the return is >=0 and <n, then
+N    *          the entire string was successfully formatted; if the return is
+N    *          >=n, the string was truncated (but there is still a null char
+N    *          at the end of what was written); if the return is <0, there was
+N    *          an error.
+N    */
+N#endif
+N#pragma __printf_args
+Nextern _ARMABI int _snprintf(char * __restrict /*s*/, size_t /*n*/,
+Xextern __declspec(__nothrow) int _snprintf(char * __restrict  , size_t  ,
+N                      const char * __restrict /*format*/, ...) __attribute__((__nonnull__(3)));
+N   /*
+N    * is equivalent to snprintf, but does not support floating-point formats.
+N    * You can use instead of snprintf to improve code size.
+N    * Returns: as snprintf.
+N    */
+N#pragma __scanf_args
+Nextern _ARMABI int fscanf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int fscanf(FILE * __restrict  ,
+N                    const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * reads input from the stream pointed to by stream, under control of the
+N    * string pointed to by format that specifies the admissible input sequences
+N    * and how thay are to be converted for assignment, using subsequent
+N    * arguments as pointers to the objects to receive the converted input. If
+N    * there are insufficient arguments for the format, the behaviour is
+N    * undefined. If the format is exhausted while arguments remain, the excess
+N    * arguments are evaluated but otherwise ignored.
+N    * The format is composed of zero or more directives: one or more
+N    * white-space characters; an ordinary character (not %); or a conversion
+N    * specification. Each conversion specification is introduced by the
+N    * character %. For a description of the available conversion specifiers
+N    * refer to section 4.9.6.2 in the ANSI draft mentioned at the start of this
+N    * file, or to any modern textbook on C.
+N    * If end-of-file is encountered during input, conversion is terminated. If
+N    * end-of-file occurs before any characters matching the current directive
+N    * have been read (other than leading white space, where permitted),
+N    * execution of the current directive terminates with an input failure;
+N    * otherwise, unless execution of the current directive is terminated with a
+N    * matching failure, execution of the following directive (if any) is
+N    * terminated with an input failure.
+N    * If conversions terminates on a conflicting input character, the offending
+N    * input character is left unread in the input strem. Trailing white space
+N    * (including new-line characters) is left unread unless matched by a
+N    * directive. The success of literal matches and suppressed asignments is
+N    * not directly determinable other than via the %n directive.
+N    * Returns: the value of the macro EOF if an input failure occurs before any
+N    *          conversion. Otherwise, the fscanf function returns the number of
+N    *          input items assigned, which can be fewer than provided for, or
+N    *          even zero, in the event of an early conflict between an input
+N    *          character and the format.
+N    */
+N#pragma __scanf_args
+Nextern _ARMABI int _fscanf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int _fscanf(FILE * __restrict  ,
+N                     const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to fscanf, but does not support floating-point formats.
+N    * You can use instead of fscanf to improve code size.
+N    * Returns: as fscanf.
+N    */
+N#pragma __scanf_args
+Nextern _ARMABI int scanf(const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int scanf(const char * __restrict  , ...) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to fscanf with the argument stdin interposed before the
+N    * arguments to scanf.
+N    * Returns: the value of the macro EOF if an input failure occurs before any
+N    *          conversion. Otherwise, the scanf function returns the number of
+N    *          input items assigned, which can be fewer than provided for, or
+N    *          even zero, in the event of an early matching failure.
+N    */
+N#pragma __scanf_args
+Nextern _ARMABI int _scanf(const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int _scanf(const char * __restrict  , ...) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to scanf, but does not support floating-point formats.
+N    * You can use instead of scanf to improve code size.
+N    * Returns: as scanf.
+N    */
+N#pragma __scanf_args
+Nextern _ARMABI int sscanf(const char * __restrict /*s*/,
+Xextern __declspec(__nothrow) int sscanf(const char * __restrict  ,
+N                    const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to fscanf except that the argument s specifies a string
+N    * from which the input is to be obtained, rather than from a stream.
+N    * Reaching the end of the string is equivalent to encountering end-of-file
+N    * for the fscanf function.
+N    * Returns: the value of the macro EOF if an input failure occurs before any
+N    *          conversion. Otherwise, the scanf function returns the number of
+N    *          input items assigned, which can be fewer than provided for, or
+N    *          even zero, in the event of an early matching failure.
+N    */
+N#pragma __scanf_args
+Nextern _ARMABI int _sscanf(const char * __restrict /*s*/,
+Xextern __declspec(__nothrow) int _sscanf(const char * __restrict  ,
+N                     const char * __restrict /*format*/, ...) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to sscanf, but does not support floating-point formats.
+N    * You can use instead of sscanf to improve code size.
+N    * Returns: as sscanf.
+N    */
+N#if !defined(__STRICT_ANSI__) || (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__) || (defined(__cplusplus) && 201103L <= __cplusplus)
+X#if !0L || (1L && 199901L <= 199409L) || (0L && 201103L <= __cplusplus)
+N/* C99 additions */
+Nextern _ARMABI int vfscanf(FILE * __restrict /*stream*/, const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int vfscanf(FILE * __restrict  , const char * __restrict  , __va_list) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI int vscanf(const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int vscanf(const char * __restrict  , __va_list) __attribute__((__nonnull__(1)));
+Nextern _ARMABI int vsscanf(const char * __restrict /*s*/, const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int vsscanf(const char * __restrict  , const char * __restrict  , __va_list) __attribute__((__nonnull__(1,2)));
+N#endif
+Nextern _ARMABI int _vfscanf(FILE * __restrict /*stream*/, const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int _vfscanf(FILE * __restrict  , const char * __restrict  , __va_list) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI int _vscanf(const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int _vscanf(const char * __restrict  , __va_list) __attribute__((__nonnull__(1)));
+Nextern _ARMABI int _vsscanf(const char * __restrict /*s*/, const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int _vsscanf(const char * __restrict  , const char * __restrict  , __va_list) __attribute__((__nonnull__(1,2)));
+Nextern _ARMABI int __ARM_vsscanf(const char * __restrict /*s*/, const char * __restrict /*format*/, __va_list) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int __ARM_vsscanf(const char * __restrict  , const char * __restrict  , __va_list) __attribute__((__nonnull__(1,2)));
+N
+Nextern _ARMABI int vprintf(const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int vprintf(const char * __restrict  , __va_list  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to printf, with the variable argument list replaced by arg,
+N    * which has been initialised by the va_start macro (and possibly subsequent
+N    * va_arg calls). The vprintf function does not invoke the va_end function.
+N    * Returns: the number of characters transmitted, or a negative value if an
+N    *          output error occurred.
+N    */
+Nextern _ARMABI int _vprintf(const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int _vprintf(const char * __restrict  , __va_list  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to vprintf, but does not support floating-point formats.
+N    * You can use instead of vprintf to improve code size.
+N    * Returns: as vprintf.
+N    */
+Nextern _ARMABI int vfprintf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int vfprintf(FILE * __restrict  ,
+N                    const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to fprintf, with the variable argument list replaced by
+N    * arg, which has been initialised by the va_start macro (and possibly
+N    * subsequent va_arg calls). The vfprintf function does not invoke the
+N    * va_end function.
+N    * Returns: the number of characters transmitted, or a negative value if an
+N    *          output error occurred.
+N    */
+Nextern _ARMABI int vsprintf(char * __restrict /*s*/,
+Xextern __declspec(__nothrow) int vsprintf(char * __restrict  ,
+N                     const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to sprintf, with the variable argument list replaced by
+N    * arg, which has been initialised by the va_start macro (and possibly
+N    * subsequent va_arg calls). The vsprintf function does not invoke the
+N    * va_end function.
+N    * Returns: the number of characters written in the array, not counting the
+N    *          terminating null character.
+N    */
+Nextern _ARMABI int __ARM_vsnprintf(char * __restrict /*s*/, size_t /*n*/,
+Xextern __declspec(__nothrow) int __ARM_vsnprintf(char * __restrict  , size_t  ,
+N                     const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(3)));
+N#if !defined(__STRICT_ANSI__) || (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__) || (defined(__cplusplus) && 201103L <= __cplusplus)
+X#if !0L || (1L && 199901L <= 199409L) || (0L && 201103L <= __cplusplus)
+Nextern _ARMABI int vsnprintf(char * __restrict /*s*/, size_t /*n*/,
+Xextern __declspec(__nothrow) int vsnprintf(char * __restrict  , size_t  ,
+N                     const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(3)));
+N   /*
+N    * is equivalent to snprintf, with the variable argument list replaced by
+N    * arg, which has been initialised by the va_start macro (and possibly
+N    * subsequent va_arg calls). The vsprintf function does not invoke the
+N    * va_end function.
+N    * Returns: the number of characters that would have been written in the
+N    *          array, not counting the terminating null character. As
+N    *          snprintf.
+N    */
+N#endif
+Nextern _ARMABI int _vsprintf(char * __restrict /*s*/,
+Xextern __declspec(__nothrow) int _vsprintf(char * __restrict  ,
+N                      const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to vsprintf, but does not support floating-point formats.
+N    * You can use instead of vsprintf to improve code size.
+N    * Returns: as vsprintf.
+N    */
+Nextern _ARMABI int _vfprintf(FILE * __restrict /*stream*/,
+Xextern __declspec(__nothrow) int _vfprintf(FILE * __restrict  ,
+N                     const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * is equivalent to vfprintf, but does not support floating-point formats.
+N    * You can use instead of vfprintf to improve code size.
+N    * Returns: as vfprintf.
+N    */
+Nextern _ARMABI int _vsnprintf(char * __restrict /*s*/, size_t /*n*/,
+Xextern __declspec(__nothrow) int _vsnprintf(char * __restrict  , size_t  ,
+N                      const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(3)));
+N   /*
+N    * is equivalent to vsnprintf, but does not support floating-point formats.
+N    * You can use instead of vsnprintf to improve code size.
+N    * Returns: as vsnprintf.
+N    */
+N#if !defined(__STRICT_ANSI__)
+X#if !0L
+N#pragma __printf_args
+Nextern _ARMABI int asprintf(char ** /*strp*/, const char * __restrict /*format*/, ...) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int asprintf(char **  , const char * __restrict  , ...) __attribute__((__nonnull__(2)));
+Nextern _ARMABI int vasprintf(char ** /*strp*/, const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int vasprintf(char **  , const char * __restrict  , __va_list  ) __attribute__((__nonnull__(2)));
+N#endif
+N#pragma __printf_args
+Nextern _ARMABI int __ARM_asprintf(char ** /*strp*/, const char * __restrict /*format*/, ...) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int __ARM_asprintf(char **  , const char * __restrict  , ...) __attribute__((__nonnull__(2)));
+Nextern _ARMABI int __ARM_vasprintf(char ** /*strp*/, const char * __restrict /*format*/, __va_list /*arg*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int __ARM_vasprintf(char **  , const char * __restrict  , __va_list  ) __attribute__((__nonnull__(2)));
+N   /*
+N    * dynamically allocates a buffer of the right size for the
+N    * formatted string, and returns it in (*strp). Formal return value
+N    * is the same as any other printf variant, except that it returns
+N    * -1 if the buffer could not be allocated.
+N    *
+N    * (The functions with __ARM_ prefixed names are identical to the
+N    * ones without, but are available in all compilation modes without
+N    * violating user namespace.)
+N    */
+N
+Nextern _ARMABI int fgetc(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int fgetc(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * obtains the next character (if present) as an unsigned char converted to
+N    * an int, from the input stream pointed to by stream, and advances the
+N    * associated file position indicator (if defined).
+N    * Returns: the next character from the input stream pointed to by stream.
+N    *          If the stream is at end-of-file, the end-of-file indicator is
+N    *          set and fgetc returns EOF. If a read error occurs, the error
+N    *          indicator is set and fgetc returns EOF.
+N    */
+Nextern _ARMABI char *fgets(char * __restrict /*s*/, int /*n*/,
+Xextern __declspec(__nothrow) char *fgets(char * __restrict  , int  ,
+N                    FILE * __restrict /*stream*/) __attribute__((__nonnull__(1,3)));
+N   /*
+N    * reads at most one less than the number of characters specified by n from
+N    * the stream pointed to by stream into the array pointed to by s. No
+N    * additional characters are read after a new-line character (which is
+N    * retained) or after end-of-file. A null character is written immediately
+N    * after the last character read into the array.
+N    * Returns: s if successful. If end-of-file is encountered and no characters
+N    *          have been read into the array, the contents of the array remain
+N    *          unchanged and a null pointer is returned. If a read error occurs
+N    *          during the operation, the array contents are indeterminate and a
+N    *          null pointer is returned.
+N    */
+Nextern _ARMABI int fputc(int /*c*/, FILE * /*stream*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int fputc(int  , FILE *  ) __attribute__((__nonnull__(2)));
+N   /*
+N    * writes the character specified by c (converted to an unsigned char) to
+N    * the output stream pointed to by stream, at the position indicated by the
+N    * asociated file position indicator (if defined), and advances the
+N    * indicator appropriately. If the file position indicator is not defined,
+N    * the character is appended to the output stream.
+N    * Returns: the character written. If a write error occurs, the error
+N    *          indicator is set and fputc returns EOF.
+N    */
+Nextern _ARMABI int fputs(const char * __restrict /*s*/, FILE * __restrict /*stream*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int fputs(const char * __restrict  , FILE * __restrict  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * writes the string pointed to by s to the stream pointed to by stream.
+N    * The terminating null character is not written.
+N    * Returns: EOF if a write error occurs; otherwise it returns a nonnegative
+N    *          value.
+N    */
+Nextern _ARMABI int getc(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int getc(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * is equivalent to fgetc except that it may be implemented as an unsafe
+N    * macro (stream may be evaluated more than once, so the argument should
+N    * never be an expression with side-effects).
+N    * Returns: the next character from the input stream pointed to by stream.
+N    *          If the stream is at end-of-file, the end-of-file indicator is
+N    *          set and getc returns EOF. If a read error occurs, the error
+N    *          indicator is set and getc returns EOF.
+N    */
+N#ifdef __cplusplus
+S    inline int getchar() { return getc(stdin); }
+N#else
+N    #define getchar() getc(stdin)
+N    extern _ARMABI int (getchar)(void);
+X    extern __declspec(__nothrow) int (getchar)(void);
+N#endif
+N   /*
+N    * is equivalent to getc with the argument stdin.
+N    * Returns: the next character from the input stream pointed to by stdin.
+N    *          If the stream is at end-of-file, the end-of-file indicator is
+N    *          set and getchar returns EOF. If a read error occurs, the error
+N    *          indicator is set and getchar returns EOF.
+N    */
+Nextern _ARMABI char *gets(char * /*s*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) char *gets(char *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * reads characters from the input stream pointed to by stdin into the array
+N    * pointed to by s, until end-of-file is encountered or a new-line character
+N    * is read. Any new-line character is discarded, and a null character is
+N    * written immediately after the last character read into the array.
+N    * Returns: s if successful. If end-of-file is encountered and no characters
+N    *          have been read into the array, the contents of the array remain
+N    *          unchanged and a null pointer is returned. If a read error occurs
+N    *          during the operation, the array contents are indeterminate and a
+N    *          null pointer is returned.
+N    */
+Nextern _ARMABI int putc(int /*c*/, FILE * /*stream*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int putc(int  , FILE *  ) __attribute__((__nonnull__(2)));
+N   /*
+N    * is equivalent to fputc except that it may be implemented as aan unsafe
+N    * macro (stream may be evaluated more than once, so the argument should
+N    * never be an expression with side-effects).
+N    * Returns: the character written. If a write error occurs, the error
+N    *          indicator is set and putc returns EOF.
+N    */
+N#ifdef __cplusplus
+S    inline int putchar(int __c) { return putc(__c, stdout); }
+N#else
+N    #define putchar(c) putc(c, stdout)
+N    extern _ARMABI int (putchar)(int /*c*/);
+X    extern __declspec(__nothrow) int (putchar)(int  );
+N#endif
+N   /*
+N    * is equivalent to putc with the second argument stdout.
+N    * Returns: the character written. If a write error occurs, the error
+N    *          indicator is set and putc returns EOF.
+N    */
+Nextern _ARMABI int puts(const char * /*s*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int puts(const char *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * writes the string pointed to by s to the stream pointed to by stdout, and
+N    * appends a new-line character to the output. The terminating null
+N    * character is not written.
+N    * Returns: EOF if a write error occurs; otherwise it returns a nonnegative
+N    *          value.
+N    */
+Nextern _ARMABI int ungetc(int /*c*/, FILE * /*stream*/) __attribute__((__nonnull__(2)));
+Xextern __declspec(__nothrow) int ungetc(int  , FILE *  ) __attribute__((__nonnull__(2)));
+N   /*
+N    * pushes the character specified by c (converted to an unsigned char) back
+N    * onto the input stream pointed to by stream. The character will be
+N    * returned by the next read on that stream. An intervening call to the
+N    * fflush function or to a file positioning function (fseek, fsetpos,
+N    * rewind) discards any pushed-back characters. The extern _ARMABIal storage
+N    * corresponding to the stream is unchanged.
+N    * One character pushback is guaranteed. If the unget function is called too
+N    * many times on the same stream without an intervening read or file
+N    * positioning operation on that stream, the operation may fail.
+N    * If the value of c equals that of the macro EOF, the operation fails and
+N    * the input stream is unchanged.
+N    * A successful call to the ungetc function clears the end-of-file
+N    * indicator. The value of the file position indicator after reading or
+N    * discarding all pushed-back characters shall be the same as it was before
+N    * the characters were pushed back. For a text stream, the value of the file
+N    * position indicator after a successful call to the ungetc function is
+N    * unspecified until all pushed-back characters are read or discarded. For a
+N    * binary stream, the file position indicator is decremented by each
+N    * successful call to the ungetc function; if its value was zero before a
+N    * call, it is indeterminate after the call.
+N    * Returns: the character pushed back after conversion, or EOF if the
+N    *          operation fails.
+N    */
+N
+Nextern _ARMABI size_t fread(void * __restrict /*ptr*/,
+Xextern __declspec(__nothrow) size_t fread(void * __restrict  ,
+N                    size_t /*size*/, size_t /*nmemb*/, FILE * __restrict /*stream*/) __attribute__((__nonnull__(1,4)));
+N   /*
+N    * reads into the array pointed to by ptr, up to nmemb members whose size is
+N    * specified by size, from the stream pointed to by stream. The file
+N    * position indicator (if defined) is advanced by the number of characters
+N    * successfully read. If an error occurs, the resulting value of the file
+N    * position indicator is indeterminate. If a partial member is read, its
+N    * value is indeterminate. The ferror or feof function shall be used to
+N    * distinguish between a read error and end-of-file.
+N    * Returns: the number of members successfully read, which may be less than
+N    *          nmemb if a read error or end-of-file is encountered. If size or
+N    *          nmemb is zero, fread returns zero and the contents of the array
+N    *          and the state of the stream remain unchanged.
+N    */
+N
+Nextern _ARMABI size_t __fread_bytes_avail(void * __restrict /*ptr*/,
+Xextern __declspec(__nothrow) size_t __fread_bytes_avail(void * __restrict  ,
+N                    size_t /*count*/, FILE * __restrict /*stream*/) __attribute__((__nonnull__(1,3)));
+N   /*
+N    * reads into the array pointed to by ptr, up to count characters from the
+N    * stream pointed to by stream. The file position indicator (if defined)
+N    * is advanced by the number of characters successfully read. If an error
+N    * occurs, the resulting value of the file position indicator is
+N    * indeterminate. The ferror or feof function shall be used to
+N    * distinguish between a read error and end-of-file.  The call will block
+N    * only if no characters are available.
+N    * Returns: the number of characters successfully read, which may be less than
+N    *          count. If count is zero, __fread_bytes_avail returns zero and
+N    *          the contents of the array and the state of the stream remain
+N    *          unchanged.
+N    */
+N
+Nextern _ARMABI size_t fwrite(const void * __restrict /*ptr*/,
+Xextern __declspec(__nothrow) size_t fwrite(const void * __restrict  ,
+N                    size_t /*size*/, size_t /*nmemb*/, FILE * __restrict /*stream*/) __attribute__((__nonnull__(1,4)));
+N   /*
+N    * writes, from the array pointed to by ptr up to nmemb members whose size
+N    * is specified by size, to the stream pointed to by stream. The file
+N    * position indicator (if defined) is advanced by the number of characters
+N    * successfully written. If an error occurs, the resulting value of the file
+N    * position indicator is indeterminate.
+N    * Returns: the number of members successfully written, which will be less
+N    *          than nmemb only if a write error is encountered.
+N    */
+N
+Nextern _ARMABI int fgetpos(FILE * __restrict /*stream*/, fpos_t * __restrict /*pos*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int fgetpos(FILE * __restrict  , fpos_t * __restrict  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * stores the current value of the file position indicator for the stream
+N    * pointed to by stream in the object pointed to by pos. The value stored
+N    * contains unspecified information usable by the fsetpos function for
+N    * repositioning the stream to its position at the time  of the call to the
+N    * fgetpos function.
+N    * Returns: zero, if successful. Otherwise nonzero is returned and the
+N    *          integer expression errno is set to an implementation-defined
+N    *          nonzero value.
+N    */
+Nextern _ARMABI int fseek(FILE * /*stream*/, long int /*offset*/, int /*whence*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int fseek(FILE *  , long int  , int  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * sets the file position indicator for the stream pointed to by stream.
+N    * For a binary stream, the new position is at the signed number of
+N    * characters specified by offset away from the point specified by whence.
+N    * The specified point is the beginning of the file for SEEK_SET, the
+N    * current position in the file for SEEK_CUR, or end-of-file for SEEK_END.
+N    * A binary stream need not meaningfully support fseek calls with a whence
+N    * value of SEEK_END.
+N    * For a text stream, either offset shall be zero, or offset shall be a
+N    * value returned by an earlier call to the ftell function on the same
+N    * stream and whence shall be SEEK_SET.
+N    * The fseek function clears the end-of-file indicator and undoes any
+N    * effects of the ungetc function on the same stream. After an fseek call,
+N    * the next operation on an update stream may be either input or output.
+N    * Returns: nonzero only for a request that cannot be satisfied.
+N    */
+Nextern _ARMABI int fsetpos(FILE * __restrict /*stream*/, const fpos_t * __restrict /*pos*/) __attribute__((__nonnull__(1,2)));
+Xextern __declspec(__nothrow) int fsetpos(FILE * __restrict  , const fpos_t * __restrict  ) __attribute__((__nonnull__(1,2)));
+N   /*
+N    * sets  the file position indicator for the stream pointed to by stream
+N    * according to the value of the object pointed to by pos, which shall be a
+N    * value returned by an earlier call to the fgetpos function on the same
+N    * stream.
+N    * The fsetpos function clears the end-of-file indicator and undoes any
+N    * effects of the ungetc function on the same stream. After an fsetpos call,
+N    * the next operation on an update stream may be either input or output.
+N    * Returns: zero, if successful. Otherwise nonzero is returned and the
+N    *          integer expression errno is set to an implementation-defined
+N    *          nonzero value.
+N    */
+Nextern _ARMABI long int ftell(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) long int ftell(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * obtains the current value of the file position indicator for the stream
+N    * pointed to by stream. For a binary stream, the value is the number of
+N    * characters from the beginning of the file. For a text stream, the file
+N    * position indicator contains unspecified information, usable by the fseek
+N    * function for returning the file position indicator to its position at the
+N    * time of the ftell call; the difference between two such return values is
+N    * not necessarily a meaningful measure of the number of characters written
+N    * or read.
+N    * Returns: if successful, the current value of the file position indicator.
+N    *          On failure, the ftell function returns -1L and sets the integer
+N    *          expression errno to an implementation-defined nonzero value.
+N    */
+Nextern _ARMABI void rewind(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) void rewind(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * sets the file position indicator for the stream pointed to by stream to
+N    * the beginning of the file. It is equivalent to
+N    *          (void)fseek(stream, 0L, SEEK_SET)
+N    * except that the error indicator for the stream is also cleared.
+N    * Returns: no value.
+N    */
+N
+Nextern _ARMABI void clearerr(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) void clearerr(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * clears the end-of-file and error indicators for the stream pointed to by
+N    * stream. These indicators are cleared only when the file is opened or by
+N    * an explicit call to the clearerr function or to the rewind function.
+N    * Returns: no value.
+N    */
+N
+Nextern _ARMABI int feof(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int feof(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * tests the end-of-file indicator for the stream pointed to by stream.
+N    * Returns: nonzero iff the end-of-file indicator is set for stream.
+N    */
+Nextern _ARMABI int ferror(FILE * /*stream*/) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int ferror(FILE *  ) __attribute__((__nonnull__(1)));
+N   /*
+N    * tests the error indicator for the stream pointed to by stream.
+N    * Returns: nonzero iff the error indicator is set for stream.
+N    */
+Nextern _ARMABI void perror(const char * /*s*/);
+Xextern __declspec(__nothrow) void perror(const char *  );
+N   /*
+N    * maps the error number  in the integer expression errno to an error
+N    * message. It writes a sequence of characters to the standard error stream
+N    * thus: first (if s is not a null pointer and the character pointed to by
+N    * s is not the null character), the string pointed to by s followed by a
+N    * colon and a space; then an appropriate error message string followed by
+N    * a new-line character. The contents of the error message strings are the
+N    * same as those returned by the strerror function with argument errno,
+N    * which are implementation-defined.
+N    * Returns: no value.
+N    */
+N
+Nextern _ARMABI int _fisatty(FILE * /*stream*/ ) __attribute__((__nonnull__(1)));
+Xextern __declspec(__nothrow) int _fisatty(FILE *   ) __attribute__((__nonnull__(1)));
+N    /* Returns 1 if the stream is tty (stdin), 0 otherwise. Not ANSI compliant.
+N     */
+N
+Nextern _ARMABI void __use_no_semihosting_swi(void);
+Xextern __declspec(__nothrow) void __use_no_semihosting_swi(void);
+Nextern _ARMABI void __use_no_semihosting(void);
+Xextern __declspec(__nothrow) void __use_no_semihosting(void);
+N    /*
+N     * Referencing either of these symbols will cause a link-time
+N     * error if any library functions that use semihosting SWI
+N     * calls are also present in the link, i.e. you define it if
+N     * you want to make sure you haven't accidentally used any such
+N     * SWIs.
+N     */
+N
+N    #ifdef __cplusplus
+S        }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif
+N  #endif /* __STDIO_DECLS */
+N
+N  #if _AEABI_PORTABILITY_LEVEL != 0 && !defined _AEABI_PORTABLE
+X  #if _AEABI_PORTABILITY_LEVEL != 0 && !0L
+S    #define _AEABI_PORTABLE
+N  #endif
+N
+N  #if defined(__cplusplus) && !defined(__STDIO_NO_EXPORTS)
+X  #if 0L && !0L
+S    using ::std::size_t;
+S    using ::std::fpos_t;
+S    using ::std::FILE;
+S    using ::std::remove;
+S    using ::std::rename;
+S    using ::std::tmpfile;
+S    using ::std::tmpnam;
+S    using ::std::fclose;
+S    using ::std::fflush;
+S    using ::std::fopen;
+S    using ::std::freopen;
+S    using ::std::setbuf;
+S    using ::std::setvbuf;
+S    using ::std::fprintf;
+S    using ::std::_fprintf;
+S    using ::std::printf;
+S    using ::std::_printf;
+S    using ::std::sprintf;
+S    using ::std::_sprintf;
+S    #if !defined(__STRICT_ANSI__) || (defined(__STDC_VERSION__) && 199901L <= __STDC_VERSION__) || (defined(__cplusplus) && 201103L <= __cplusplus)
+S      using ::std::snprintf;
+S      using ::std::vsnprintf;
+S      using ::std::vfscanf;
+S      using ::std::vscanf;
+S      using ::std::vsscanf;
+S    #endif
+S    using ::std::_snprintf;
+S    using ::std::_vsnprintf;
+S#if !defined(__STRICT_ANSI__)
+S    using ::std::asprintf;
+S    using ::std::vasprintf;
+S#endif
+S    using ::std::__ARM_asprintf;
+S    using ::std::__ARM_vasprintf;
+S    using ::std::__ARM_vsnprintf;
+S    using ::std::__ARM_snprintf;
+S    using ::std::__ARM_vsscanf;
+S    using ::std::fscanf;
+S    using ::std::_fscanf;
+S    using ::std::scanf;
+S    using ::std::_scanf;
+S    using ::std::sscanf;
+S    using ::std::_sscanf;
+S    using ::std::_vfscanf;
+S    using ::std::_vscanf;
+S    using ::std::_vsscanf;
+S    using ::std::vprintf;
+S    using ::std::_vprintf;
+S    using ::std::vfprintf;
+S    using ::std::_vfprintf;
+S    using ::std::vsprintf;
+S    using ::std::_vsprintf;
+S    using ::std::fgetc;
+S    using ::std::fgets;
+S    using ::std::fputc;
+S    using ::std::fputs;
+S    using ::std::getc;
+S    using ::std::getchar;
+S    using ::std::gets;
+S    using ::std::putc;
+S    using ::std::putchar;
+S    using ::std::puts;
+S    using ::std::ungetc;
+S    using ::std::fread;
+S    using ::std::__fread_bytes_avail;
+S    using ::std::fwrite;
+S    using ::std::fgetpos;
+S    using ::std::fseek;
+S    using ::std::fsetpos;
+S    using ::std::ftell;
+S    using ::std::rewind;
+S    using ::std::clearerr;
+S    using ::std::feof;
+S    using ::std::ferror;
+S    using ::std::perror;
+S    using ::std::_fisatty;
+S    using ::std::__use_no_semihosting_swi;
+S    using ::std::__use_no_semihosting;
+N  #endif
+N
+N#endif /* ndef __stdio_h */
+N
+N/* end of stdio.h */
+N
+L 16 "..\ETHERCAT\ethercatprint.c" 2
+N#include "ethercattype.h"
+L 1 "..\ETHERCAT\ethercattype.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercattype.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file
+N * \brief   
+N * General typedefs and defines for EtherCAT.
+N *
+N * Defines that could need optimalisation for specific applications
+N * are the EC_TIMEOUTxxx. Assumptions for the standard settings are a
+N * standard linux PC or laptop and a wired connection to maximal 100 slaves.
+N * For use with wireless connections or lots of slaves the timouts need
+N * increasing. For fast systems running Xenomai and RT-net or alike the
+N * timeouts need to be shorter.   
+N */
+N
+N#ifndef _EC_TYPE_H
+N#define _EC_TYPE_H
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N/** Define Little or Big endian target */
+N#define EC_BIG_ENDIAN
+N
+N/** define EC_VER1 if version 1 default context and functions are needed
+N * comment if application uses only ecx_ functions and own context */
+N#define EC_VER1
+N
+N#include "osal.h"
+L 1 "..\ETHERCAT\osal.h" 1
+N/******************************************************************************
+N *                *          ***                    ***
+N *              ***          ***                    ***
+N * ***  ****  **********     ***        *****       ***  ****          *****
+N * *********  **********     ***      *********     ************     *********
+N * ****         ***          ***              ***   ***       ****   ***
+N * ***          ***  ******  ***      ***********   ***        ****   *****
+N * ***          ***  ******  ***    *************   ***        ****      *****
+N * ***          ****         ****   ***       ***   ***       ****          ***
+N * ***           *******      ***** **************  *************    *********
+N * ***             *****        ***   *******   **  **  ******         *****
+N *                           t h e  r e a l t i m e  t a r g e t  e x p e r t s
+N *
+N * http://www.rt-labs.com
+N * Copyright (C) 2009. rt-labs AB, Sweden. All rights reserved.
+N *------------------------------------------------------------------------------
+N * $Id: osal.h 473 2013-04-08 11:43:02Z rtlaka $
+N *------------------------------------------------------------------------------
+N */
+N
+N#ifndef _osal_
+N#define _osal_
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N#include <stdint.h>
+L 1 "C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h" 1
+N/* Copyright (C) ARM Ltd., 1999,2014 */
+N/* All rights reserved */
+N
+N/*
+N * RCS $Revision$
+N * Checkin $Date$
+N * Revising $Author: agrant $
+N */
+N
+N#ifndef __stdint_h
+N#define __stdint_h
+N#define __ARMCLIB_VERSION 5060034
+N
+N  #ifdef __INT64_TYPE__
+S    /* armclang predefines '__INT64_TYPE__' and '__INT64_C_SUFFIX__' */
+S    #define __INT64 __INT64_TYPE__
+N  #else
+N    /* armcc has builtin '__int64' which can be used in --strict mode */
+N    #define __INT64 __int64
+N    #define __INT64_C_SUFFIX__ ll
+N  #endif
+N  #define __PASTE2(x, y) x ## y
+N  #define __PASTE(x, y) __PASTE2(x, y)
+N  #define __INT64_C(x)  __ESCAPE__(__PASTE(x, __INT64_C_SUFFIX__))
+N  #define __UINT64_C(x)  __ESCAPE__(__PASTE(x ## u, __INT64_C_SUFFIX__))
+N  #if defined(__clang__) || (defined(__ARMCC_VERSION) && !defined(__STRICT_ANSI__))
+X  #if 0L || (1L && !0L)
+N    /* armclang and non-strict armcc allow 'long long' in system headers */
+N    #define __LONGLONG long long
+N  #else
+S    /* strict armcc has '__int64' */
+S    #define __LONGLONG __int64
+N  #endif
+N
+N  #ifndef __STDINT_DECLS
+N  #define __STDINT_DECLS
+N
+N    #undef __CLIBNS
+N
+N    #ifdef __cplusplus
+S      namespace std {
+S          #define __CLIBNS std::
+S          extern "C" {
+N    #else
+N      #define __CLIBNS
+N    #endif  /* __cplusplus */
+N
+N
+N/*
+N * 'signed' is redundant below, except for 'signed char' and if
+N * the typedef is used to declare a bitfield.
+N */
+N
+N    /* 7.18.1.1 */
+N
+N    /* exact-width signed integer types */
+Ntypedef   signed          char int8_t;
+Ntypedef   signed short     int int16_t;
+Ntypedef   signed           int int32_t;
+Ntypedef   signed       __INT64 int64_t;
+Xtypedef   signed       __int64 int64_t;
+N
+N    /* exact-width unsigned integer types */
+Ntypedef unsigned          char uint8_t;
+Ntypedef unsigned short     int uint16_t;
+Ntypedef unsigned           int uint32_t;
+Ntypedef unsigned       __INT64 uint64_t;
+Xtypedef unsigned       __int64 uint64_t;
+N
+N    /* 7.18.1.2 */
+N
+N    /* smallest type of at least n bits */
+N    /* minimum-width signed integer types */
+Ntypedef   signed          char int_least8_t;
+Ntypedef   signed short     int int_least16_t;
+Ntypedef   signed           int int_least32_t;
+Ntypedef   signed       __INT64 int_least64_t;
+Xtypedef   signed       __int64 int_least64_t;
+N
+N    /* minimum-width unsigned integer types */
+Ntypedef unsigned          char uint_least8_t;
+Ntypedef unsigned short     int uint_least16_t;
+Ntypedef unsigned           int uint_least32_t;
+Ntypedef unsigned       __INT64 uint_least64_t;
+Xtypedef unsigned       __int64 uint_least64_t;
+N
+N    /* 7.18.1.3 */
+N
+N    /* fastest minimum-width signed integer types */
+Ntypedef   signed           int int_fast8_t;
+Ntypedef   signed           int int_fast16_t;
+Ntypedef   signed           int int_fast32_t;
+Ntypedef   signed       __INT64 int_fast64_t;
+Xtypedef   signed       __int64 int_fast64_t;
+N
+N    /* fastest minimum-width unsigned integer types */
+Ntypedef unsigned           int uint_fast8_t;
+Ntypedef unsigned           int uint_fast16_t;
+Ntypedef unsigned           int uint_fast32_t;
+Ntypedef unsigned       __INT64 uint_fast64_t;
+Xtypedef unsigned       __int64 uint_fast64_t;
+N
+N    /* 7.18.1.4 integer types capable of holding object pointers */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+Stypedef   signed       __INT64 intptr_t;
+Stypedef unsigned       __INT64 uintptr_t;
+N#else
+Ntypedef   signed           int intptr_t;
+Ntypedef unsigned           int uintptr_t;
+N#endif
+N
+N    /* 7.18.1.5 greatest-width integer types */
+Ntypedef   signed     __LONGLONG intmax_t;
+Xtypedef   signed     long long intmax_t;
+Ntypedef unsigned     __LONGLONG uintmax_t;
+Xtypedef unsigned     long long uintmax_t;
+N
+N
+N#if !defined(__cplusplus) || defined(__STDC_LIMIT_MACROS)
+X#if !0L || 0L
+N
+N    /* 7.18.2.1 */
+N
+N    /* minimum values of exact-width signed integer types */
+N#define INT8_MIN                   -128
+N#define INT16_MIN                -32768
+N#define INT32_MIN          (~0x7fffffff)   /* -2147483648 is unsigned */
+N#define INT64_MIN  __INT64_C(~0x7fffffffffffffff) /* -9223372036854775808 is unsigned */
+N
+N    /* maximum values of exact-width signed integer types */
+N#define INT8_MAX                    127
+N#define INT16_MAX                 32767
+N#define INT32_MAX            2147483647
+N#define INT64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of exact-width unsigned integer types */
+N#define UINT8_MAX                   255
+N#define UINT16_MAX                65535
+N#define UINT32_MAX           4294967295u
+N#define UINT64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.2 */
+N
+N    /* minimum values of minimum-width signed integer types */
+N#define INT_LEAST8_MIN                   -128
+N#define INT_LEAST16_MIN                -32768
+N#define INT_LEAST32_MIN          (~0x7fffffff)
+N#define INT_LEAST64_MIN  __INT64_C(~0x7fffffffffffffff)
+N
+N    /* maximum values of minimum-width signed integer types */
+N#define INT_LEAST8_MAX                    127
+N#define INT_LEAST16_MAX                 32767
+N#define INT_LEAST32_MAX            2147483647
+N#define INT_LEAST64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of minimum-width unsigned integer types */
+N#define UINT_LEAST8_MAX                   255
+N#define UINT_LEAST16_MAX                65535
+N#define UINT_LEAST32_MAX           4294967295u
+N#define UINT_LEAST64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.3 */
+N
+N    /* minimum values of fastest minimum-width signed integer types */
+N#define INT_FAST8_MIN           (~0x7fffffff)
+N#define INT_FAST16_MIN          (~0x7fffffff)
+N#define INT_FAST32_MIN          (~0x7fffffff)
+N#define INT_FAST64_MIN  __INT64_C(~0x7fffffffffffffff)
+N
+N    /* maximum values of fastest minimum-width signed integer types */
+N#define INT_FAST8_MAX             2147483647
+N#define INT_FAST16_MAX            2147483647
+N#define INT_FAST32_MAX            2147483647
+N#define INT_FAST64_MAX  __INT64_C(9223372036854775807)
+N
+N    /* maximum values of fastest minimum-width unsigned integer types */
+N#define UINT_FAST8_MAX            4294967295u
+N#define UINT_FAST16_MAX           4294967295u
+N#define UINT_FAST32_MAX           4294967295u
+N#define UINT_FAST64_MAX __UINT64_C(18446744073709551615)
+N
+N    /* 7.18.2.4 */
+N
+N    /* minimum value of pointer-holding signed integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define INTPTR_MIN INT64_MIN
+N#else
+N#define INTPTR_MIN INT32_MIN
+N#endif
+N
+N    /* maximum value of pointer-holding signed integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define INTPTR_MAX INT64_MAX
+N#else
+N#define INTPTR_MAX INT32_MAX
+N#endif
+N
+N    /* maximum value of pointer-holding unsigned integer type */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define UINTPTR_MAX UINT64_MAX
+N#else
+N#define UINTPTR_MAX UINT32_MAX
+N#endif
+N
+N    /* 7.18.2.5 */
+N
+N    /* minimum value of greatest-width signed integer type */
+N#define INTMAX_MIN  __ESCAPE__(~0x7fffffffffffffffll)
+N
+N    /* maximum value of greatest-width signed integer type */
+N#define INTMAX_MAX  __ESCAPE__(9223372036854775807ll)
+N
+N    /* maximum value of greatest-width unsigned integer type */
+N#define UINTMAX_MAX __ESCAPE__(18446744073709551615ull)
+N
+N    /* 7.18.3 */
+N
+N    /* limits of ptrdiff_t */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define PTRDIFF_MIN INT64_MIN
+S#define PTRDIFF_MAX INT64_MAX
+N#else
+N#define PTRDIFF_MIN INT32_MIN
+N#define PTRDIFF_MAX INT32_MAX
+N#endif
+N
+N    /* limits of sig_atomic_t */
+N#define SIG_ATOMIC_MIN (~0x7fffffff)
+N#define SIG_ATOMIC_MAX   2147483647
+N
+N    /* limit of size_t */
+N#if __sizeof_ptr == 8
+X#if 4 == 8
+S#define SIZE_MAX UINT64_MAX
+N#else
+N#define SIZE_MAX UINT32_MAX
+N#endif
+N
+N    /* limits of wchar_t */
+N    /* NB we have to undef and redef because they're defined in both
+N     * stdint.h and wchar.h */
+N#undef WCHAR_MIN
+N#undef WCHAR_MAX
+N
+N#if defined(__WCHAR32) || (defined(__ARM_SIZEOF_WCHAR_T) && __ARM_SIZEOF_WCHAR_T == 4)
+X#if 0L || (0L && __ARM_SIZEOF_WCHAR_T == 4)
+S  #define WCHAR_MIN   0
+S  #define WCHAR_MAX   0xffffffffU
+N#else
+N  #define WCHAR_MIN   0
+N  #define WCHAR_MAX   65535
+N#endif
+N
+N    /* limits of wint_t */
+N#define WINT_MIN (~0x7fffffff)
+N#define WINT_MAX 2147483647
+N
+N#endif /* __STDC_LIMIT_MACROS */
+N
+N#if !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS)
+X#if !0L || 0L
+N
+N    /* 7.18.4.1 macros for minimum-width integer constants */
+N#define INT8_C(x)   (x)
+N#define INT16_C(x)  (x)
+N#define INT32_C(x)  (x)
+N#define INT64_C(x)  __INT64_C(x)
+N
+N#define UINT8_C(x)  (x ## u)
+N#define UINT16_C(x) (x ## u)
+N#define UINT32_C(x) (x ## u)
+N#define UINT64_C(x) __UINT64_C(x)
+N
+N    /* 7.18.4.2 macros for greatest-width integer constants */
+N#define INTMAX_C(x)  __ESCAPE__(x ## ll)
+N#define UINTMAX_C(x) __ESCAPE__(x ## ull)
+N
+N#endif /* __STDC_CONSTANT_MACROS */
+N
+N    #ifdef __cplusplus
+S         }  /* extern "C" */
+S      }  /* namespace std */
+N    #endif /* __cplusplus */
+N  #endif /* __STDINT_DECLS */
+N
+N  #ifdef __cplusplus
+S    #ifndef __STDINT_NO_EXPORTS
+S      using ::std::int8_t;
+S      using ::std::int16_t;
+S      using ::std::int32_t;
+S      using ::std::int64_t;
+S      using ::std::uint8_t;
+S      using ::std::uint16_t;
+S      using ::std::uint32_t;
+S      using ::std::uint64_t;
+S      using ::std::int_least8_t;
+S      using ::std::int_least16_t;
+S      using ::std::int_least32_t;
+S      using ::std::int_least64_t;
+S      using ::std::uint_least8_t;
+S      using ::std::uint_least16_t;
+S      using ::std::uint_least32_t;
+S      using ::std::uint_least64_t;
+S      using ::std::int_fast8_t;
+S      using ::std::int_fast16_t;
+S      using ::std::int_fast32_t;
+S      using ::std::int_fast64_t;
+S      using ::std::uint_fast8_t;
+S      using ::std::uint_fast16_t;
+S      using ::std::uint_fast32_t;
+S      using ::std::uint_fast64_t;
+S      using ::std::intptr_t;
+S      using ::std::uintptr_t;
+S      using ::std::intmax_t;
+S      using ::std::uintmax_t;
+S    #endif
+N  #endif /* __cplusplus */
+N
+N#undef __INT64
+N#undef __LONGLONG
+N
+N#endif /* __stdint_h */
+N
+N/* end of stdint.h */
+L 30 "..\ETHERCAT\osal.h" 2
+N
+N/* General types */
+Ntypedef uint8_t             boolean;
+N#define TRUE                1
+N#define FALSE               0
+N		
+Ntypedef int8_t              int8;
+Ntypedef int16_t             int16;
+Ntypedef int32_t             int32;
+Ntypedef uint8_t             uint8;
+Ntypedef uint16_t            uint16;
+Ntypedef uint32_t            uint32;
+Ntypedef int64_t             int64;
+Ntypedef uint64_t            uint64;
+Ntypedef float               float32;
+Ntypedef double              float64;
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 70 "..\ETHERCAT\ethercattype.h" 2
+N	
+N/** return value general error */
+N#define EC_ERROR           -3
+N/** return value no frame returned */
+N#define EC_NOFRAME         -1
+N/** return value unknown frame received */
+N#define EC_OTHERFRAME      -2
+N/** maximum EtherCAT frame length in bytes */
+N#define EC_MAXECATFRAME    1518	
+N/** maximum EtherCAT LRW frame length in bytes */
+N/* MTU - Ethernet header - length - datagram header - WCK - FCS */
+N#define EC_MAXLRWDATA      (EC_MAXECATFRAME - 14 - 2 - 10 - 2 - 4)
+N/** size of DC datagram used in first LRW frame */
+N#define EC_FIRSTDCDATAGRAM 20
+N/** standard frame buffer size in bytes */
+N#define EC_BUFSIZE         EC_MAXECATFRAME
+N/** datagram type EtherCAT */
+N#define EC_ECATTYPE        0x1000
+N/** number of frame buffers per channel (tx, rx1 rx2) */
+N#define EC_MAXBUF          16
+N//#define EC_MAXBUF          4
+N/** timeout value in us for tx frame to return to rx */
+N#define EC_TIMEOUTRET      2000
+N/** timeout value in us for safe data transfer, max. triple retry */
+N#define EC_TIMEOUTRET3     (EC_TIMEOUTRET * 3)
+N/** timeout value in us for return "safe" variant (f.e. wireless) */
+N#define EC_TIMEOUTSAFE     20000
+N/** timeout value in us for EEPROM access */
+N#define EC_TIMEOUTEEP      20000
+N/** timeout value in us for tx mailbox cycle */
+N#define EC_TIMEOUTTXM      20000
+N/** timeout value in us for rx mailbox cycle */
+N#define EC_TIMEOUTRXM      700000
+N/** timeout value in us for check statechange */
+N#define EC_TIMEOUTSTATE    2000000
+N/** size of EEPROM bitmap cache */
+N#define EC_MAXEEPBITMAP    128
+N/** size of EEPROM cache buffer */
+N#define EC_MAXEEPBUF       EC_MAXEEPBITMAP << 5
+N/** default number of retries if wkc <= 0 */
+N#define EC_DEFAULTRETRIES  3
+N
+N/** definition for frame buffers */
+Ntypedef uint8 ec_bufT[EC_BUFSIZE];
+Xtypedef uint8 ec_bufT[1518];
+N
+N///** ethernet header definition */
+Ntypedef struct
+N{
+N   /** destination MAC */
+N   uint16  da0,da1,da2;
+N   /** source MAC */
+N   uint16  sa0,sa1,sa2;
+N   /** ethernet type */
+N   uint16  etype;
+N} ec_etherheadert;
+N
+N/** ethernet header size */
+N#define ETH_HEADERSIZE      sizeof(ec_etherheadert)
+N
+N/** EtherCAT datagram header definition */
+Ntypedef struct
+N{
+N   /** length of EtherCAT datagram */
+N   uint16  elength;
+N   /** EtherCAT command, see ec_cmdtype */
+N   uint8   command;
+N   /** index, used in SOEM for Tx to Rx recombination */
+N   uint8   index;
+N   /** ADP */
+N   uint16  ADP;
+N   /** ADO */
+N   uint16  ADO;
+N   /** length of data portion in datagram */
+N   uint16  dlength;
+N   /** interrupt, currently unused */
+N   uint16  irpt;
+N} ec_comt;
+N
+N/** EtherCAT header size */
+N#define EC_HEADERSIZE       sizeof(ec_comt)
+N/** size of ec_comt.elength item in EtherCAT header */
+N#define EC_ELENGTHSIZE      sizeof(uint16)
+N/** offset position of command in EtherCAT header */
+N#define EC_CMDOFFSET        EC_ELENGTHSIZE
+N/** size of workcounter item in EtherCAT datagram */
+N#define EC_WKCSIZE          sizeof(uint16)
+N/** definition of datagram follows bit in ec_comt.dlength */
+N#define EC_DATAGRAMFOLLOWS  (1 << 15)
+N
+N/** Possible error codes returned. */
+Ntypedef enum
+N{
+N   /** No error */
+N   EC_ERR_OK         = 0,
+N   /** Library already initialized. */
+N   EC_ERR_ALREADY_INITIALIZED,
+N   /** Library not initialized. */
+N   EC_ERR_NOT_INITIALIZED,
+N   /** Timeout occured during execution of the function. */
+N   EC_ERR_TIMEOUT,
+N   /** No slaves were found. */
+N   EC_ERR_NO_SLAVES,
+N   /** Function failed. */
+N   EC_ERR_NOK
+N} ec_err;
+N
+N/** Possible EtherCAT slave states */
+Ntypedef enum
+N{
+N   /** Init state*/
+N   EC_STATE_INIT           = 0x01,
+N   /** Pre-operational. */
+N   EC_STATE_PRE_OP         = 0x02,
+N   /** Boot state*/
+N   EC_STATE_BOOT            = 0x03,
+N   /** Safe-operational. */
+N   EC_STATE_SAFE_OP        = 0x04,
+N   /** Operational */
+N   EC_STATE_OPERATIONAL    = 0x08,
+N   /** Error or ACK error */
+N   EC_STATE_ACK            = 0x10,
+N   EC_STATE_ERROR          = 0x10
+N} ec_state;
+N
+N/** Possible buffer states */
+Ntypedef enum
+N{
+N   /** Empty */
+N   EC_BUF_EMPTY        = 0x00,
+N   /** Allocated, but not filled */
+N   EC_BUF_ALLOC        = 0x01,
+N   /** Transmitted */
+N   EC_BUF_TX           = 0x02,
+N   /** Received, but not consumed */
+N   EC_BUF_RCVD         = 0x03,
+N   /** Cycle completed */
+N   EC_BUF_COMPLETE     = 0x04
+N} ec_bufstate;
+N
+N/** Ethercat data types */
+Ntypedef enum
+N{
+N   ECT_BOOLEAN         = 0x0001,
+N   ECT_INTEGER8        = 0x0002,
+N   ECT_INTEGER16       = 0x0003,
+N   ECT_INTEGER32       = 0x0004,
+N   ECT_UNSIGNED8       = 0x0005,
+N   ECT_UNSIGNED16      = 0x0006,
+N   ECT_UNSIGNED32      = 0x0007,
+N   ECT_REAL32          = 0x0008,
+N   ECT_VISIBLE_STRING  = 0x0009,
+N   ECT_OCTET_STRING    = 0x000A,
+N   ECT_UNICODE_STRING  = 0x000B,
+N   ECT_TIME_OF_DAY     = 0x000C,
+N   ECT_TIME_DIFFERENCE = 0x000D,
+N   ECT_DOMAIN          = 0x000F,
+N   ECT_INTEGER24       = 0x0010,
+N   ECT_REAL64          = 0x0011,
+N   ECT_INTEGER64       = 0x0015,
+N   ECT_UNSIGNED24      = 0x0016,
+N   ECT_UNSIGNED64      = 0x001B,
+N   ECT_BIT1            = 0x0030,
+N   ECT_BIT2            = 0x0031,
+N   ECT_BIT3            = 0x0032,
+N   ECT_BIT4            = 0x0033,
+N   ECT_BIT5            = 0x0034,
+N   ECT_BIT6            = 0x0035,
+N   ECT_BIT7            = 0x0036,
+N   ECT_BIT8            = 0x0037
+N} ec_datatype;
+N
+N/** Ethercat command types */
+Ntypedef enum 
+N{
+N   /** No operation */
+N   EC_CMD_NOP          = 0x00,
+N   /** Auto Increment Read */
+N   EC_CMD_APRD,
+N   /** Auto Increment Write */
+N   EC_CMD_APWR,
+N   /** Auto Increment Read Write */
+N   EC_CMD_APRW,
+N   /** Configured Address Read */
+N   EC_CMD_FPRD,
+N   /** Configured Address Write */
+N   EC_CMD_FPWR,
+N   /** Configured Address Read Write */
+N   EC_CMD_FPRW,
+N   /** Broadcast Read */
+N   EC_CMD_BRD,
+N   /** Broaddcast Write */
+N   EC_CMD_BWR,
+N   /** Broadcast Read Write */
+N   EC_CMD_BRW,
+N   /** Logical Memory Read */
+N   EC_CMD_LRD,
+N   /** Logical Memory Write */
+N   EC_CMD_LWR,
+N   /** Logical Memory Read Write */
+N   EC_CMD_LRW,
+N   /** Auto Increment Read Mulitple Write */
+N   EC_CMD_ARMW,
+N   /** Configured Read Mulitple Write */
+N   EC_CMD_FRMW
+N   /** Reserved */
+N} ec_cmdtype;
+N
+N/** Ethercat EEprom command types */
+Ntypedef enum 
+N{
+N   /** No operation */
+N   EC_ECMD_NOP         = 0x0000,
+N   /** Read */
+N   EC_ECMD_READ        = 0x0100,
+N   /** Write */
+N   EC_ECMD_WRITE       = 0x0201,
+N   /** Reload */
+N   EC_ECMD_RELOAD      = 0x0300
+N} ec_ecmdtype;
+N
+N/** EEprom state machine read size */
+N#define EC_ESTAT_R64    0x0040
+N/** EEprom state machine busy flag */
+N#define EC_ESTAT_BUSY   0x8000
+N/** EEprom state machine error flag mask */
+N#define EC_ESTAT_EMASK  0x7800
+N/** EEprom state machine error acknowledge */
+N#define EC_ESTAT_NACK   0x2000
+N
+N/* Ethercat SSI (Slave Information Interface) */
+N
+N/** Start address SII sections in Eeprom */
+N#define ECT_SII_START   0x0040
+N
+Nenum
+N{
+N   /** SII category strings */
+N   ECT_SII_STRING      = 10,
+N   /** SII category general */
+N   ECT_SII_GENERAL     = 30,
+N   /** SII category FMMU */
+N   ECT_SII_FMMU        = 40,
+N   /** SII category SM */
+N   ECT_SII_SM          = 41,
+N   /** SII category PDO */
+N   ECT_SII_PDO         = 50
+N};
+N
+N/** Item offsets in SII general section */
+Nenum
+N{
+N   ECT_SII_MANUF       = 0x0008,
+N   ECT_SII_ID          = 0x000a,
+N   ECT_SII_REV         = 0x000c,
+N   ECT_SII_BOOTRXMBX   = 0x0014,
+N   ECT_SII_BOOTTXMBX   = 0x0016,
+N   ECT_SII_MBXSIZE     = 0x0019,
+N   ECT_SII_TXMBXADR    = 0x001a,
+N   ECT_SII_RXMBXADR    = 0x0018,
+N   ECT_SII_MBXPROTO    = 0x001c
+N};
+N
+N/** Mailbox types definitions */
+Nenum
+N{
+N   /** Error mailbox type */
+N   ECT_MBXT_ERR        = 0x00,
+N   /** ADS over EtherCAT mailbox type */
+N   ECT_MBXT_AOE,
+N   /** Ethernet over EtherCAT mailbox type */
+N   ECT_MBXT_EOE,
+N   /** CANopen over EtherCAT mailbox type */
+N   ECT_MBXT_COE,
+N   /** File over EtherCAT mailbox type */
+N   ECT_MBXT_FOE,
+N   /** Servo over EtherCAT mailbox type */
+N   ECT_MBXT_SOE,
+N   /** Vendor over EtherCAT mailbox type */
+N   ECT_MBXT_VOE        = 0x0f
+N};
+N
+N/** CoE mailbox types */
+Nenum
+N{
+N   ECT_COES_EMERGENCY  = 0x01,
+N   ECT_COES_SDOREQ,
+N   ECT_COES_SDORES,
+N   ECT_COES_TXPDO,
+N   ECT_COES_RXPDO,
+N   ECT_COES_TXPDO_RR,
+N   ECT_COES_RXPDO_RR,
+N   ECT_COES_SDOINFO
+N};
+N
+N/** CoE SDO commands */
+Nenum
+N{
+N   ECT_SDO_DOWN_INIT    = 0x21,
+N   ECT_SDO_DOWN_EXP     = 0x23,
+N   ECT_SDO_DOWN_INIT_CA = 0x31,
+N   ECT_SDO_UP_REQ       = 0x40,
+N   ECT_SDO_UP_REQ_CA    = 0x50,
+N   ECT_SDO_SEG_UP_REQ   = 0x60,
+N   ECT_SDO_ABORT        = 0x80
+N};
+N
+N/** CoE Object Description commands */
+Nenum
+N{
+N   ECT_GET_ODLIST_REQ  = 0x01,
+N   ECT_GET_ODLIST_RES  = 0x02,
+N   ECT_GET_OD_REQ      = 0x03,
+N   ECT_GET_OD_RES      = 0x04,
+N   ECT_GET_OE_REQ      = 0x05,
+N   ECT_GET_OE_RES      = 0x06,
+N   ECT_SDOINFO_ERROR   = 0x07
+N};
+N
+N/** FoE opcodes */
+Nenum
+N{
+N   ECT_FOE_READ        = 0x01,
+N   ECT_FOE_WRITE,
+N   ECT_FOE_DATA,
+N   ECT_FOE_ACK,
+N   ECT_FOE_ERROR,
+N   ECT_FOE_BUSY
+N};
+N
+N/** SoE opcodes */
+Nenum
+N{
+N   ECT_SOE_READREQ     = 0x01,
+N   ECT_SOE_READRES,
+N   ECT_SOE_WRITEREQ,
+N   ECT_SOE_WRITERES,
+N   ECT_SOE_NOTIFICATION,
+N   ECT_SOE_EMERGENCY
+N};
+N
+N/** Ethercat registers */
+Nenum 
+N{
+N   ECT_REG_TYPE        = 0x0000,
+N   ECT_REG_PORTDES     = 0x0007,
+N   ECT_REG_ESCSUP      = 0x0008,
+N   ECT_REG_STADR       = 0x0010,
+N   ECT_REG_ALIAS       = 0x0012,
+N   ECT_REG_DLCTL       = 0x0100,
+N   ECT_REG_DLPORT      = 0x0101,
+N   ECT_REG_DLALIAS     = 0x0103,
+N   ECT_REG_DLSTAT      = 0x0110,
+N   ECT_REG_ALCTL       = 0x0120,
+N   ECT_REG_ALSTAT      = 0x0130,
+N   ECT_REG_ALSTATCODE  = 0x0134,
+N   ECT_REG_PDICTL      = 0x0140,
+N   ECT_REG_IRQMASK     = 0x0200,
+N   ECT_REG_RXERR       = 0x0300,
+N   ECT_REG_FRXERR      = 0x0308,
+N   ECT_REG_EPUECNT     = 0x030C,
+N   ECT_REG_PECNT       = 0x030D,
+N   ECT_REG_PECODE      = 0x030E,
+N   ECT_REG_LLCNT       = 0x0310,
+N	 ECT_REG_WD          = 0x0420,
+N   ECT_REG_WDCNT       = 0x0442,
+N   ECT_REG_EEPCFG      = 0x0500,
+N   ECT_REG_EEPCTL      = 0x0502,
+N   ECT_REG_EEPSTAT     = 0x0502,
+N   ECT_REG_EEPADR      = 0x0504,
+N   ECT_REG_EEPDAT      = 0x0508,
+N   ECT_REG_FMMU0       = 0x0600,
+N   ECT_REG_FMMU1       = ECT_REG_FMMU0 + 0x10,
+N   ECT_REG_FMMU2       = ECT_REG_FMMU1 + 0x10,
+N   ECT_REG_FMMU3       = ECT_REG_FMMU2 + 0x10,
+N   ECT_REG_SM0         = 0x0800,
+N   ECT_REG_SM1         = ECT_REG_SM0 + 0x08,
+N   ECT_REG_SM2         = ECT_REG_SM1 + 0x08,
+N   ECT_REG_SM3         = ECT_REG_SM2 + 0x08,
+N   ECT_REG_SM0STAT     = ECT_REG_SM0 + 0x05,
+N   ECT_REG_SM1STAT     = ECT_REG_SM1 + 0x05,
+N   ECT_REG_SM1ACT      = ECT_REG_SM1 + 0x06,
+N   ECT_REG_SM1CONTR    = ECT_REG_SM1 + 0x07,
+N   ECT_REG_DCTIME0     = 0x0900,
+N   ECT_REG_DCTIME1     = 0x0904,
+N   ECT_REG_DCTIME2     = 0x0908,
+N   ECT_REG_DCTIME3     = 0x090C,
+N   ECT_REG_DCSYSTIME   = 0x0910,
+N   ECT_REG_DCSOF       = 0x0918,
+N   ECT_REG_DCSYSOFFSET = 0x0920,
+N   ECT_REG_DCSYSDELAY  = 0x0928,
+N   ECT_REG_DCSYSDIFF   = 0x092C,
+N   ECT_REG_DCSPEEDCNT  = 0x0930,
+N   ECT_REG_DCTIMEFILT  = 0x0934,
+N   ECT_REG_DCCUC       = 0x0980,
+N   ECT_REG_DCSYNCACT   = 0x0981,
+N   ECT_REG_DCSTART0    = 0x0990,
+N   ECT_REG_DCCYCLE0    = 0x09A0,
+N   ECT_REG_DCCYCLE1    = 0x09A4
+N};
+N
+N/** standard SDO Sync Manager Communication Type */
+N#define ECT_SDO_SMCOMMTYPE      0x1c00
+N/** standard SDO PDO assignment */
+N#define ECT_SDO_PDOASSIGN       0x1c10
+N/** standard SDO RxPDO assignment */
+N#define ECT_SDO_RXPDOASSIGN     0x1c12
+N/** standard SDO TxPDO assignment */
+N#define ECT_SDO_TXPDOASSIGN     0x1c13
+N
+N/** Ethercat packet type */
+N#define ETH_P_ECAT              0x88A4
+N
+N/** Error types */
+Ntypedef enum
+N{
+N   EC_ERR_TYPE_SDO_ERROR        = 0,
+N   EC_ERR_TYPE_EMERGENCY        = 1,
+N   EC_ERR_TYPE_PACKET_ERROR     = 3,
+N   EC_ERR_TYPE_SDOINFO_ERROR    = 4,
+N   EC_ERR_TYPE_FOE_ERROR        = 5,
+N   EC_ERR_TYPE_FOE_BUF2SMALL    = 6,
+N   EC_ERR_TYPE_FOE_PACKETNUMBER = 7,
+N   EC_ERR_TYPE_SOE_ERROR        = 8,
+N   EC_ERR_TYPE_MBX_ERROR        = 9
+N} ec_err_type;
+N
+N/** Struct to retrieve errors. */
+N#pragma anon_unions
+Ntypedef struct
+N{
+N   /** Signal bit, error set but not read */
+N   boolean     Signal;
+N   /** Slave number that generated the error */
+N   uint16      Slave;
+N   /** CoE SDO index that generated the error */
+N   uint16      Index;
+N   /** CoE SDO subindex that generated the error */
+N   uint8       SubIdx;
+N   /** Type of error */
+N   ec_err_type Etype;
+N   union
+N   {
+N      /** General abortcode */
+N      int32   AbortCode;
+N      /** Specific error for Emergency mailbox */
+N      struct
+N      {
+N         uint16  ErrorCode;
+N         uint8   ErrorReg;
+N         uint8   b1;
+N         uint16  w1;
+N         uint16  w2;
+N      };
+N   };
+N} ec_errort;
+N
+N/** Helper macros */
+N/** Macro to make a word from 2 bytes */
+N#define MK_WORD(msb, lsb)   ((((uint16)(msb))<<8) | (lsb))
+N/** Macro to get hi byte of a word */
+N#define HI_BYTE(w)          ((w) >> 8)
+N/** Macro to get low byte of a word */
+N#define LO_BYTE(w)          ((w) & 0x00ff)
+N/** Macro to swap hi and low byte of a word */
+N#define SWAP(w)             ((((w)& 0xff00) >> 8) | (((w) & 0x00ff) << 8))
+N/** Macro to get hi word of a dword */
+N#define LO_WORD(l)          ((l) & 0xffff)
+N/** Macro to get hi word of a dword */
+N#define HI_WORD(l)          ((l) >> 16)
+N
+N#define get_unaligned(ptr) \
+N  ({ __typeof__(*(ptr)) __tmp; memcpy(&__tmp, (ptr), sizeof(*(ptr))); __tmp; })
+X#define get_unaligned(ptr)   ({ __typeof__(*(ptr)) __tmp; memcpy(&__tmp, (ptr), sizeof(*(ptr))); __tmp; })
+N
+N#define put_unaligned32(val, ptr)        \
+N  (memcpy((ptr), &(val), 4))
+X#define put_unaligned32(val, ptr)          (memcpy((ptr), &(val), 4))
+N
+N#define put_unaligned64(val, ptr)        \
+N  (memcpy((ptr), &(val), 8))
+X#define put_unaligned64(val, ptr)          (memcpy((ptr), &(val), 8))
+N
+N#if !defined(EC_BIG_ENDIAN) && defined(EC_LITTLE_ENDIAN)
+X#if !1L && 0L
+S
+S	#define htons(A) (A)
+S  #define htoes(A) (A)
+S  #define htoel(A) (A)
+S  #define htoell(A) (A)
+S  #define etohs(A) (A)
+S  #define etohl(A) (A)
+S  #define etohll(A) (A)
+S
+N#elif !defined(EC_LITTLE_ENDIAN) && defined(EC_BIG_ENDIAN)
+X#elif !0L && 1L
+N//  #define htoes(A) ((((uint16)(A) & 0xff00) >> 8) | \
+N                    (((uint16)(A) & 0x00ff) << 8))
+X
+N//  #define htoel(A) ((((uint32)(A) & 0xff000000) >> 24) | \
+N//                    (((uint32)(A) & 0x00ff0000) >> 8)  | \
+N//                    (((uint32)(A) & 0x0000ff00) << 8)  | \
+N//                    (((uint32)(A) & 0x000000ff) << 24))
+X
+N//  #define htoell(A) ((((uint64)(A) & (uint64)0xff00000000000000ULL) >> 56) | \
+N//                     (((uint64)(A) & (uint64)0x00ff000000000000ULL) >> 40) | \
+N//                     (((uint64)(A) & (uint64)0x0000ff0000000000ULL) >> 24) | \
+N//                     (((uint64)(A) & (uint64)0x000000ff00000000ULL) >> 8)  | \
+N//                     (((uint64)(A) & (uint64)0x00000000ff000000ULL) << 8)  | \
+N//                     (((uint64)(A) & (uint64)0x0000000000ff0000ULL) << 24) | \
+N//                     (((uint64)(A) & (uint64)0x000000000000ff00ULL) << 40) | \
+N//                     (((uint64)(A) & (uint64)0x00000000000000ffULL) << 56))
+X
+N
+N//  #define etohs  htoes
+N//  #define etohl  htoel
+N//  #define etohll htoell
+N  #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \
+N                    (((uint16)(A) & 0x00ff) << 8))
+X  #define htons(A) ((((uint16)(A) & 0xff00) >> 8) |                     (((uint16)(A) & 0x00ff) << 8))
+N  #define htonl(A) ((((uint32)(A) & 0xff000000) >> 24) | \
+N                   (((uint32)(A) & 0x00ff0000) >> 8)  | \
+N                   (((uint32)(A) & 0x0000ff00) << 8)  | \
+N                   (((uint32)(A) & 0x000000ff) << 24)) 
+X  #define htonl(A) ((((uint32)(A) & 0xff000000) >> 24) |                    (((uint32)(A) & 0x00ff0000) >> 8)  |                    (((uint32)(A) & 0x0000ff00) << 8)  |                    (((uint32)(A) & 0x000000ff) << 24)) 
+N  #define htoes(A) (A)
+N  #define htoel(A) (A)
+N  #define htoell(A) (A)
+N
+N  #define etohs(A)  (A)
+N  #define etohl(A)  (A)
+N  #define etohll(A)  (A)
+N
+N#else
+S
+S  #error "Must define one of EC_BIG_ENDIAN or EC_LITTLE_ENDIAN"
+S
+N#endif
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif /* _EC_TYPE_H */
+L 17 "..\ETHERCAT\ethercatprint.c" 2
+N#include "ethercatmain.h"
+L 1 "..\ETHERCAT\ethercatmain.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : ethercatmain.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo 揈therCAT?are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstra遝 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file 
+N * \brief
+N * Headerfile for ethercatmain.c 
+N */
+N
+N#include "nicdrv.h"
+L 1 "..\ETHERCAT\nicdrv.h" 1
+N/*
+N * Simple Open EtherCAT Master Library 
+N *
+N * File    : nicdrv.h
+N * Version : 1.3.1
+N * Date    : 11-03-2015
+N * Copyright (C) 2005-2015 Speciaal Machinefabriek Ketels v.o.f.
+N * Copyright (C) 2005-2015 Arthur Ketels
+N * Copyright (C) 2008-2009 TU/e Technische Universiteit Eindhoven
+N * Copyright (C) 2014-2015 rt-labs AB , Sweden
+N *
+N * SOEM is free software; you can redistribute it and/or modify it under
+N * the terms of the GNU General Public License version 2 as published by the Free
+N * Software Foundation.
+N *
+N * SOEM is distributed in the hope that it will be useful, but WITHOUT ANY
+N * WARRANTY; without even the implied warranty of MERCHANTABILITY or
+N * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+N * for more details.
+N *
+N * As a special exception, if other files instantiate templates or use macros
+N * or inline functions from this file, or you compile this file and link it
+N * with other works to produce a work based on this file, this file does not
+N * by itself cause the resulting work to be covered by the GNU General Public
+N * License. However the source code for this file must still be made available
+N * in accordance with section (3) of the GNU General Public License.
+N *
+N * This exception does not invalidate any other reasons why a work based on
+N * this file might be covered by the GNU General Public License.
+N *
+N * The EtherCAT Technology, the trade name and logo “EtherCAT” are the intellectual
+N * property of, and protected by Beckhoff Automation GmbH. You can use SOEM for
+N * the sole purpose of creating, using and/or selling or otherwise distributing
+N * an EtherCAT network master provided that an EtherCAT Master License is obtained
+N * from Beckhoff Automation GmbH.
+N *
+N * In case you did not receive a copy of the EtherCAT Master License along with
+N * SOEM write to Beckhoff Automation GmbH, Eiserstraße 5, D-33415 Verl, Germany
+N * (www.beckhoff.com).
+N */
+N
+N/** \file 
+N * \brief
+N * Headerfile for nicdrv.c 
+N */
+N
+N#ifndef _nicdrvh_
+N#define _nicdrvh_
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N#define HAVE_REMOTE
+N
+N
+N/** pointer structure to Tx and Rx stacks */
+Ntypedef struct
+N{
+N
+N   /** tx buffer */
+N   ec_bufT     (*txbuf)[EC_MAXBUF];
+X   ec_bufT     (*txbuf)[16];
+N   /** tx buffer lengths */
+N   int         (*txbuflength)[EC_MAXBUF];
+X   int         (*txbuflength)[16];
+N   /** temporary receive buffer */
+N   ec_bufT     *tempbuf;
+N   /** rx buffers */
+N   ec_bufT     (*rxbuf)[EC_MAXBUF];
+X   ec_bufT     (*rxbuf)[16];
+N   /** rx buffer status fields */
+N   int         (*rxbufstat)[EC_MAXBUF];
+X   int         (*rxbufstat)[16];
+N   /** received MAC source address (middle word) */
+N   int         (*rxsa)[EC_MAXBUF];
+X   int         (*rxsa)[16];
+N} ec_stackT;   
+N/** pointer structure to buffers for redundant port */
+Ntypedef struct
+N{
+N   ec_stackT   stack;
+N
+N   /** rx buffers */
+N   ec_bufT rxbuf[EC_MAXBUF];
+X   ec_bufT rxbuf[16];
+N   /** rx buffer status */
+N   int rxbufstat[EC_MAXBUF];
+X   int rxbufstat[16];
+N   /** rx MAC source address */
+N   int rxsa[EC_MAXBUF];
+X   int rxsa[16];
+N   /** temporary rx buffer */
+N   ec_bufT tempinbuf;
+N} ecx_redportt;
+N
+N/** pointer structure to buffers, vars and mutexes for port instantiation */
+Ntypedef struct
+N{
+N   ec_stackT   stack;
+N
+N   /** rx buffers */
+N   ec_bufT rxbuf[EC_MAXBUF];
+X   ec_bufT rxbuf[16];
+N   /** rx buffer status */
+N   int rxbufstat[EC_MAXBUF];
+X   int rxbufstat[16];
+N   /** rx MAC source address */
+N   int rxsa[EC_MAXBUF];
+X   int rxsa[16];
+N   /** temporary rx buffer */
+N   ec_bufT tempinbuf;
+N   /** temporary rx buffer status */
+N   int tempinbufs;
+N   /** transmit buffers */
+N   ec_bufT txbuf[EC_MAXBUF];
+X   ec_bufT txbuf[16];
+N   /** transmit buffer lenghts */
+N   int txbuflength[EC_MAXBUF];
+X   int txbuflength[16];
+N   /** temporary tx buffer */
+N	ec_bufT txbuf2;
+N   /** temporary tx buffer length */
+N  int txbuflength2;
+N   /** last used frame index */
+N   int lastidx;
+N   /** current redundancy state */
+N   int redstate;
+N	 ecx_redportt *redport; 
+N} ecx_portt;
+N
+Nextern const uint16 priMAC[3];
+Nextern const uint16 secMAC[3];
+N#ifdef EC_VER1
+Nextern ecx_portt     ecx_port;
+Nextern ecx_redportt  ecx_redport;
+N
+Nvoid ec_setbufstat(int idx, int bufstat);
+Nint ec_getindex(void);
+Nint ec_outframe(int idx, int sock);
+Nint ec_outframe_red(int idx);
+Nint ec_srconfirm(int idx,int timeout);
+N#endif
+N
+Nvoid ec_setupheader(void *p);
+Nint ecx_setupnic(ecx_portt *port,int secondary);
+Nvoid ecx_setbufstat(ecx_portt *port, int idx, int bufstat);
+Nint ecx_getindex(ecx_portt *port);
+Nint ecx_outframe(ecx_portt *port, int idx, int sock);
+Nint ecx_outframe_red(ecx_portt *port, int idx);
+Nint ecx_srconfirm(ecx_portt *port, int idx,int timeout);
+Nint ecx_waitinframe(ecx_portt *port, int idx, int timeout);
+Nint ecx_waitinframe_red(ecx_portt *port, int idx, int timeout);
+N
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 48 "..\ETHERCAT\ethercatmain.h" 2
+N
+N#ifndef _ethercatmain_
+N#define _ethercatmain_
+N
+N
+N#ifdef __cplusplus
+Sextern "C"
+S{
+N#endif
+N
+N/** max. etries in EtherCAT error list */
+N#define EC_MAXELIST       64
+N/** max. length of readable name in slavelist and Object Description List */
+N#define EC_MAXNAME        20
+N/** max. number of slaves in array */
+N#define EC_MAXSLAVE       20
+N/** max. number of groups */
+N#define EC_MAXGROUP       2
+N/** max. number of IO segments per group */
+N#define EC_MAXIOSEGMENTS  64
+N/** max. mailbox size */
+N#define EC_MAXMBX         1486
+N/** max. eeprom PDO entries */
+N#define EC_MAXEEPDO       0x200
+N/** max. SM used */
+N#define EC_MAXSM          8
+N/** max. FMMU used */
+N#define EC_MAXFMMU        4
+N/** max. Adapter */
+N#define EC_MAXLEN_ADAPTERNAME    128
+N
+N
+N/** record for FMMU */
+Ntypedef struct
+N{
+N   uint32  LogStart;
+N   uint16  LogLength;
+N   uint8   LogStartbit;
+N   uint8   LogEndbit;
+N   uint16  PhysStart;
+N   uint8   PhysStartBit;
+N   uint8   FMMUtype;
+N   uint8   FMMUactive;
+N   uint8   unused1;
+N   uint16  unused2;  
+N}ec_fmmut;
+N
+N/** record for sync manager */
+Ntypedef struct
+N{
+N   uint16  StartAddr;
+N   uint16  SMlength;
+N   uint32  SMflags;
+N} ec_smt;
+N
+Ntypedef struct
+N{
+N   uint16  State;
+N   uint16  Unused;
+N   uint16  ALstatuscode;
+N} ec_state_status;
+N
+N#define ECT_MBXPROT_AOE      0x0001
+N#define ECT_MBXPROT_EOE      0x0002
+N#define ECT_MBXPROT_COE      0x0004
+N#define ECT_MBXPROT_FOE      0x0008
+N#define ECT_MBXPROT_SOE      0x0010
+N#define ECT_MBXPROT_VOE      0x0020
+N
+N#define ECT_COEDET_SDO       0x01
+N#define ECT_COEDET_SDOINFO   0x02
+N#define ECT_COEDET_PDOASSIGN 0x04
+N#define ECT_COEDET_PDOCONFIG 0x08
+N#define ECT_COEDET_UPLOAD    0x10
+N#define ECT_COEDET_SDOCA     0x20
+N
+N#define EC_SMENABLEMASK      0xfffeffff
+N
+N/** for list of ethercat slaves detected */
+N//#pragma pack (4)
+Ntypedef struct
+N{
+N   /** state of slave */
+N   uint16           state;
+N   /** AL status code */
+N   uint16           ALstatuscode;
+N   /** Configured address */
+N   uint16           configadr;
+N   /** Alias address */
+N   uint16           aliasadr;
+N   /** Manufacturer from EEprom */
+N   uint32           eep_man;
+N   /** ID from EEprom */
+N   uint32           eep_id;
+N   /** revision from EEprom */
+N   uint32           eep_rev;
+N   /** Interface type */
+N   uint16           Itype;
+N   /** Device type */
+N   uint16           Dtype;
+N   /** output bits */
+N   uint16           Obits;
+N   /** output bytes, if Obits < 8 then Obytes = 0 */
+N   uint32           Obytes;
+N   /** output pointer in IOmap buffer */
+N   uint8            *outputs;
+N   /** startbit in first output byte */
+N   uint8            Ostartbit;
+N   /** input bits */
+N   uint16           Ibits;
+N   /** input bytes, if Ibits < 8 then Ibytes = 0 */
+N   uint32           Ibytes;
+N   /** input pointer in IOmap buffer */
+N   uint8            *inputs;
+N   /** startbit in first input byte */
+N   uint8            Istartbit;
+N   /** SM structure */
+N   ec_smt           SM[EC_MAXSM];
+X   ec_smt           SM[8];
+N   /** SM type 0=unused 1=MbxWr 2=MbxRd 3=Outputs 4=Inputs */
+N   uint8            SMtype[EC_MAXSM];
+X   uint8            SMtype[8];
+N   /** FMMU structure */
+N   ec_fmmut         FMMU[EC_MAXFMMU];
+X   ec_fmmut         FMMU[4];
+N   /** FMMU0 function */
+N   uint8            FMMU0func;
+N   /** FMMU1 function */
+N   uint8            FMMU1func;
+N   /** FMMU2 function */
+N   uint8            FMMU2func;
+N   /** FMMU3 function */
+N   uint8            FMMU3func;
+N   /** length of write mailbox in bytes, if no mailbox then 0 */
+N   uint16           mbx_l;
+N   /** mailbox write offset */
+N   uint16           mbx_wo;
+N   /** length of read mailbox in bytes */
+N   uint16           mbx_rl;
+N   /** mailbox read offset */
+N   uint16           mbx_ro;
+N   /** mailbox supported protocols */
+N   uint16           mbx_proto;
+N   /** Counter value of mailbox link layer protocol 1..7 */
+N   uint8            mbx_cnt;
+N   /** has DC capabillity */
+N   boolean          hasdc;
+N   /** Physical type; Ebus, EtherNet combinations */
+N   uint8            ptype;
+N   /** topology: 1 to 3 links */
+N   uint8            topology;
+N   /** active ports bitmap : ....3210 , set if respective port is active **/
+N   uint8            activeports;
+N   /** consumed ports bitmap : ....3210, used for internal delay measurement **/
+N   uint8            consumedports;
+N   /** slave number for parent, 0=master */
+N   uint16           parent;
+N   /** port number on parent this slave is connected to **/
+N   uint8            parentport;
+N   /** port number on this slave the parent is connected to **/
+N   uint8            entryport;
+N   /** DC receivetimes on port A */
+N   int32            DCrtA;
+N   /** DC receivetimes on port B */
+N   int32            DCrtB; 
+N   /** DC receivetimes on port C */
+N   int32            DCrtC;
+N   /** DC receivetimes on port D */
+N   int32            DCrtD;
+N   /** propagation delay */
+N   int32            pdelay;
+N   /** next DC slave */
+N   uint16           DCnext;
+N   /** previous DC slave */
+N   uint16           DCprevious;
+N   /** DC cyle time in ns */
+N   int32            DCcycle;
+N   /** DC shift from clock modulus boundary */
+N   int32            DCshift;
+N   /** DC sync activation, 0=off, 1=on */
+N   uint8            DCactive;
+N   /** link to config table */
+N   uint16           configindex;
+N   /** link to SII config */
+N   uint16           SIIindex;
+N   /** 1 = 8 bytes per read, 0 = 4 bytes per read */
+N   uint8            eep_8byte;
+N   /** 0 = eeprom to master , 1 = eeprom to PDI */
+N   uint8            eep_pdi;
+N   /** CoE details */
+N   uint8            CoEdetails;
+N   /** FoE details */
+N   uint8            FoEdetails;
+N   /** EoE details */
+N   uint8            EoEdetails;
+N   /** SoE details */
+N   uint8            SoEdetails;
+N   /** E-bus current */
+N   int16            Ebuscurrent;
+N   /** if >0 block use of LRW in processdata */
+N   uint8            blockLRW;
+N   /** group */
+N   uint8            group;
+N   /** first unused FMMU */
+N   uint8            FMMUunused;
+N   /** TRUE is slave is not responding at all */
+N   boolean          islost;
+N   /** registered configuration function PO->SO */
+N   int              (*PO2SOconfig)(uint16 slave);
+N   /** readable name */
+N   char             name[EC_MAXNAME + 1];
+X   char             name[20 + 1];
+N} ec_slavet;
+N#pragma pack () 
+N/** for list of ethercat slave groups */
+Ntypedef struct
+N{
+N   /** logical start address for this group */
+N   uint32           logstartaddr;
+N   /** output bytes, if Obits < 8 then Obytes = 0 */
+N   uint32           Obytes;
+N   /** output pointer in IOmap buffer */
+N   uint8            *outputs;
+N   /** input bytes, if Ibits < 8 then Ibytes = 0 */
+N   uint32           Ibytes;
+N   /** input pointer in IOmap buffer */
+N   uint8            *inputs;
+N   /** has DC capabillity */
+N   boolean          hasdc;
+N   /** next DC slave */
+N   uint16           DCnext;
+N   /** E-bus current */
+N   int16            Ebuscurrent;
+N   /** if >0 block use of LRW in processdata */
+N   uint8            blockLRW;
+N   /** IO segegments used */
+N   uint16           nsegments;
+N   /** 1st input segment */
+N   uint16           Isegment;
+N   /** Offset in input segment */
+N   uint16           Ioffset;
+N   /** Expected workcounter outputs */
+N   uint16           outputsWKC;
+N   /** Expected workcounter inputs */
+N   uint16           inputsWKC;
+N   /** check slave states */
+N   boolean          docheckstate;
+N   /** IO segmentation list. Datagrams must not break SM in two. */
+N   uint32           IOsegment[EC_MAXIOSEGMENTS];
+X   uint32           IOsegment[64];
+N} ec_groupt;
+N
+N/** SII FMMU structure */
+Ntypedef struct
+N{
+N   uint16  Startpos;
+N   uint8   nFMMU;
+N   uint8   FMMU0;
+N   uint8   FMMU1;
+N   uint8   FMMU2;
+N   uint8   FMMU3;
+N} ec_eepromFMMUt;
+N
+N/** SII SM structure */
+Ntypedef struct
+N{
+N   uint16  Startpos;
+N   uint8   nSM;
+N   uint16  PhStart;
+N   uint16  Plength;
+N   uint8   Creg;
+N   uint8   Sreg;       /* dont care */
+N   uint8   Activate;
+N   uint8   PDIctrl;      /* dont care */
+N} ec_eepromSMt;
+N
+N/** record to store rxPDO and txPDO table from eeprom */
+Ntypedef struct 
+N{
+N   uint16  Startpos;
+N   uint16  Length;
+N   uint16  nPDO;
+N   uint16  Index[EC_MAXEEPDO];
+X   uint16  Index[0x200];
+N   uint16  SyncM[EC_MAXEEPDO];
+X   uint16  SyncM[0x200];
+N   uint16  BitSize[EC_MAXEEPDO];
+X   uint16  BitSize[0x200];
+N   uint16  SMbitsize[EC_MAXSM];
+X   uint16  SMbitsize[8];
+N} ec_eepromPDOt;
+N
+N/** mailbox buffer array */
+Ntypedef uint8 ec_mbxbuft[EC_MAXMBX + 1];
+Xtypedef uint8 ec_mbxbuft[1486 + 1];
+N
+N/** standard ethercat mailbox header */
+Ntypedef struct
+N{
+N   uint16  length;
+N   uint16  address;
+N   uint8   priority;
+N   uint8   mbxtype;
+N} ec_mbxheadert;
+N
+N
+N/** ALstatus and ALstatus code */
+Ntypedef struct
+N{
+N   uint16  alstatus;
+N   uint16  unused;
+N   uint16  alstatuscode;
+N} ec_alstatust;
+N
+N/** stack structure to store segmented LRD/LWR/LRW constructs */
+Ntypedef struct
+N{
+N   uint8   pushed;
+N   uint8   pulled;
+N   uint8   idx[EC_MAXBUF];
+X   uint8   idx[16];
+N   void    *data[EC_MAXBUF];
+X   void    *data[16];
+N   uint16  length[EC_MAXBUF];
+X   uint16  length[16];
+N} ec_idxstackT;
+N
+N/** ringbuf for error storage */
+Ntypedef struct 
+N{
+N   int16     head;
+N   int16     tail;
+N   ec_errort Error[EC_MAXELIST + 1];
+X   ec_errort Error[64 + 1];
+N} ec_eringt;
+N
+N/** SyncManager Communication Type structure for CA */
+Ntypedef struct
+N{
+N   uint8   n;
+N   uint8   nu1;
+N   uint8   SMtype[EC_MAXSM];
+X   uint8   SMtype[8];
+N} ec_SMcommtypet;   
+N
+N/** SDO assign structure for CA */
+Ntypedef struct
+N{
+N   uint8   n;
+N   uint8   nu1;
+N   uint16  index[256];
+N} ec_PDOassignt;   
+N
+N/** SDO description structure for CA */
+Ntypedef struct
+N{
+N   uint8   n;
+N   uint8   nu1;
+N   uint32  PDO[256];
+N} ec_PDOdesct;   
+N
+N/** Context structure , referenced by all ecx functions*/
+Ntypedef struct
+N{
+N   /** port reference, may include red_port */
+N   ecx_portt      *port;
+N   /** slavelist reference */
+N   ec_slavet      *slavelist;
+N   /** number of slaves found in configuration */
+N   int            *slavecount;
+N   /** maximum number of slaves allowed in slavelist */
+N   int            maxslave;
+N   /** grouplist reference */
+N   ec_groupt      *grouplist;
+N   /** maximum number of groups allowed in grouplist */
+N   int            maxgroup;
+N   /** internal, reference to eeprom cache buffer */
+N   uint8          *esibuf;
+N   /** internal, reference to eeprom cache map */
+N   uint32         *esimap;
+N   /** internal, current slave for eeprom cache */
+N   uint16         esislave;
+N   /** internal, reference to error list */
+N   ec_eringt      *elist;
+N   /** internal, reference to processdata stack buffer info */
+N   ec_idxstackT   *idxstack;
+N   /** reference to ecaterror state */
+N   boolean        *ecaterror;
+N   /** internal, position of DC datagram in process data packet */
+N   uint16         DCtO;
+N   /** internal, length of DC datagram */
+N   uint16         DCl;
+N   /** reference to last DC time from slaves */
+N   int64          *DCtime;
+N   /** internal, SM buffer */
+N   ec_SMcommtypet *SMcommtype;
+N   /** internal, PDO assign list */
+N   ec_PDOassignt  *PDOassign;
+N   /** internal, PDO description list */
+N   ec_PDOdesct    *PDOdesc;
+N   /** internal, SM list from eeprom */
+N   ec_eepromSMt   *eepSM;
+N   /** internal, FMMU list from eeprom */
+N   ec_eepromFMMUt *eepFMMU; 
+N   /** registered FoE hook */
+N   int            (*FOEhook)(uint16 slave, int packetnumber, int datasize);
+N} ecx_contextt;
+N
+N#ifdef EC_VER1
+N/** global struct to hold default master context */
+Nextern ecx_contextt  ecx_context;
+N/** main slave data structure array */
+Nextern ec_slavet   ec_slave[EC_MAXSLAVE];
+Xextern ec_slavet   ec_slave[20];
+N/** number of slaves found by configuration function */
+Nextern int         ec_slavecount;
+N/** slave group structure */
+Nextern ec_groupt   ec_group[EC_MAXGROUP];
+Xextern ec_groupt   ec_group[2];
+Nextern boolean     EcatError;
+Nextern int64       ec_DCtime;
+N
+N
+N
+N
+Nint ec_init(void);
+N
+N
+Nuint16 ec_statecheck(uint16 slave, uint16 reqstate, int timeout);
+N#endif
+N
+Nuint8 ec_nextmbxcnt(uint8 cnt);
+Nvoid ec_clearmbx(ec_mbxbuft *Mbx);
+Nvoid ecx_pusherror(ecx_contextt *context, const ec_errort *Ec);
+Nboolean ecx_poperror(ecx_contextt *context, ec_errort *Ec);
+Nvoid ecx_packeterror(ecx_contextt *context, uint16 Slave, uint16 Index, uint8 SubIdx, uint16 ErrorCode);
+Nint ecx_init(ecx_contextt *context);
+Nint ecx_init_redundant(ecx_contextt *context, ecx_redportt *redport);
+Nuint8 ecx_siigetbyte(ecx_contextt *context, uint16 slave, uint16 address);
+Nint16 ecx_siifind(ecx_contextt *context, uint16 slave, uint16 cat);
+Nvoid ecx_siistring(ecx_contextt *context, char *str, uint16 slave, uint16 Sn);
+Nuint16 ecx_siiFMMU(ecx_contextt *context, uint16 slave, ec_eepromFMMUt* FMMU);
+Nuint16 ecx_siiSM(ecx_contextt *context, uint16 slave, ec_eepromSMt* SM);
+Nuint16 ecx_siiSMnext(ecx_contextt *context, uint16 slave, ec_eepromSMt* SM, uint16 n);
+Nint ecx_siiPDO(ecx_contextt *context, uint16 slave, ec_eepromPDOt* PDO, uint8 t);
+Nuint16 ecx_statecheck(ecx_contextt *context, uint16 slave, uint16 reqstate, int timeout);
+Nint ecx_mbxempty(ecx_contextt *context, uint16 slave, int timeout);
+Nint ecx_mbxsend(ecx_contextt *context, uint16 slave,ec_mbxbuft *mbx, int timeout);
+Nint ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeout);
+Nuint32 ecx_readeeprom(ecx_contextt *context, uint16 slave, uint16 eeproma, int timeout);
+Nint ecx_writeeeprom(ecx_contextt *context, uint16 slave, uint16 eeproma, uint16 data, int timeout);
+Nint ecx_eeprom2master(ecx_contextt *context, uint16 slave);
+Nint ecx_eeprom2pdi(ecx_contextt *context, uint16 slave);
+Nuint64 ecx_readeepromAP(ecx_contextt *context, uint16 aiadr, uint16 eeproma, int timeout);
+Nint ecx_writeeepromAP(ecx_contextt *context, uint16 aiadr, uint16 eeproma, uint16 data, int timeout);
+Nuint64 ecx_readeepromFP(ecx_contextt *context, uint16 configadr, uint16 eeproma, int timeout);
+Nint ecx_writeeepromFP(ecx_contextt *context, uint16 configadr, uint16 eeproma, uint16 data, int timeout);
+Nvoid ecx_readeeprom1(ecx_contextt *context, uint16 slave, uint16 eeproma);
+Nuint32 ecx_readeeprom2(ecx_contextt *context, uint16 slave, int timeout);
+Nint ec_writestate(uint16 slave);
+Nint ec_readstate(void);
+Nint ecx_readstate(ecx_contextt *context);
+Nint ecx_writestate(ecx_contextt *context, uint16 slave);
+Nint ec_send_processdata_group(uint8 group);
+Nint ecx_receive_processdata_group(ecx_contextt *context, uint8 group, int timeout);
+Nint ec_receive_processdata_group(uint8 group, int timeout);
+Nint ec_send_processdata(void);
+Nint ec_receive_processdata(int timeout);
+Nint ecx_send_processdata_group(ecx_contextt *context, uint8 group);
+N#ifdef __cplusplus
+S}
+N#endif
+N
+N#endif
+L 18 "..\ETHERCAT\ethercatprint.c" 2
+N
+N#define EC_MAXERRORNAME 127
+N
+N/** SDO error list type definition */
+Ntypedef struct
+N{
+N   /** Error code returned from SDO */
+N   uint32        errorcode;
+N   /** Readable error description */
+N   char          errordescription[EC_MAXERRORNAME + 1];
+X   char          errordescription[127 + 1];
+N} ec_sdoerrorlist_t;
+N
+N/** AL status code list type definition */
+Ntypedef struct
+N{
+N   /** AL status code */
+N   uint16        ALstatuscode;
+N   /** Readable description */
+N   char          ALstatuscodedescription[EC_MAXERRORNAME + 1];
+X   char          ALstatuscodedescription[127 + 1];
+N} ec_ALstatuscodelist_t;
+N
+N/** SoE error list type definition */
+Ntypedef struct
+N{
+N   /** SoE error code */
+N   uint16        errorcode;
+N   /** Readable description */
+N   char          errordescription[EC_MAXERRORNAME + 1];
+X   char          errordescription[127 + 1];
+N} ec_soeerrorlist_t;
+N
+N/** MBX error list type definition */
+Ntypedef struct
+N{
+N   /** MBX error code */
+N   uint16              errorcode;
+N   /** Readable description */
+N   char                errordescription[EC_MAXERRORNAME + 1];
+X   char                errordescription[127 + 1];
+N} ec_mbxerrorlist_t;
+N
+Nchar estring[EC_MAXERRORNAME];
+Xchar estring[127];
+N
+N/** SDO error list definition */
+Nconst ec_sdoerrorlist_t ec_sdoerrorlist[] = {
+N   {0x00000000, "No error" },
+N   {0x05030000, "Toggle bit not changed" },
+N   {0x05040000, "SDO protocol timeout" },
+N   {0x05040001, "Client/Server command specifier not valid or unknown" },
+N   {0x05040005, "Out of memory" },
+N   {0x06010000, "Unsupported access to an object" },
+N   {0x06010001, "Attempt to read to a write only object" },
+N   {0x06010002, "Attempt to write to a read only object" },
+N   {0x06010003, "Subindex can not be written, SI0 must be 0 for write access" },
+N   {0x06010004, "SDO Complete access not supported for variable length objects" },
+N   {0x06010005, "Object length exceeds mailbox size" },
+N   {0x06010006, "Object mapped to RxPDO, SDO download blocked" },
+N   {0x06020000, "The object does not exist in the object directory" },
+N   {0x06040041, "The object can not be mapped into the PDO" },
+N   {0x06040042, "The number and length of the objects to be mapped would exceed the PDO length" },
+N   {0x06040043, "General parameter incompatibility reason" },
+N   {0x06040047, "General internal incompatibility in the device" },
+N   {0x06060000, "Access failed due to a hardware error" },
+N   {0x06070010, "Data type does not match, length of service parameter does not match" },
+N   {0x06070012, "Data type does not match, length of service parameter too high" },
+N   {0x06070013, "Data type does not match, length of service parameter too low" },
+N   {0x06090011, "Subindex does not exist" },
+N   {0x06090030, "Value range of parameter exceeded (only for write access)" },
+N   {0x06090031, "Value of parameter written too high" },
+N   {0x06090032, "Value of parameter written too low" },
+N   {0x06090036, "Maximum value is less than minimum value" },
+N   {0x08000000, "General error" },
+N   {0x08000020, "Data cannot be transferred or stored to the application" },
+N   {0x08000021, "Data cannot be transferred or stored to the application because of local control" },
+N   {0x08000022, "Data cannot be transferred or stored to the application because of the present device state" },
+N   {0x08000023, "Object dictionary dynamic generation fails or no object dictionary is present" },
+N   {0xffffffff, "Unknown" }
+N};
+N
+N/** AL status code list definition */
+Nconst ec_ALstatuscodelist_t ec_ALstatuscodelist[] = {
+N   {0x0000 , "No error" },
+N   {0x0001 , "Unspecified error" },
+N   {0x0002 , "No memory" },
+N   {0x0011 , "Invalid requested state change" },
+N   {0x0012 , "Unknown requested state" },
+N   {0x0013 , "Bootstrap not supported" },
+N   {0x0014 , "No valid firmware" },
+N   {0x0015 , "Invalid mailbox configuration" },
+N   {0x0016 , "Invalid mailbox configuration" },
+N   {0x0017 , "Invalid sync manager configuration" },
+N   {0x0018 , "No valid inputs available" },
+N   {0x0019 , "No valid outputs" },
+N   {0x001A , "Synchronization error" },
+N   {0x001B , "Sync manager watchdog" },
+N   {0x001C , "Invalid sync Manager types" },
+N   {0x001D , "Invalid output configuration" },
+N   {0x001E , "Invalid input configuration" },
+N   {0x001F , "Invalid watchdog configuration" },
+N   {0x0020 , "Slave needs cold start" },
+N   {0x0021 , "Slave needs INIT" },
+N   {0x0022 , "Slave needs PREOP" },
+N   {0x0023 , "Slave needs SAFEOP" },
+N   {0x0024 , "Invalid input mapping" },
+N   {0x0025 , "Invalid output mapping" },
+N   {0x0026 , "Inconsistent settings" },
+N   {0x0027 , "Freerun not supported" },
+N   {0x0028 , "Synchronisation not supported" },
+N   {0x0029 , "Freerun needs 3buffer mode" },
+N   {0x002A , "Background watchdog" },
+N   {0x002B , "No valid Inputs and Outputs" },
+N   {0x002C , "Fatal sync error" },
+N   {0x002D , "No sync error" }, // was "Invalid Output FMMU Configuration"
+N   {0x002E , "Invalid input FMMU configuration" },
+N   {0x0030 , "Invalid DC SYNC configuration" },
+N   {0x0031 , "Invalid DC latch configuration" },
+N   {0x0032 , "PLL error" },
+N   {0x0033 , "DC sync IO error" },
+N   {0x0034 , "DC sync timeout error" },
+N   {0x0035 , "DC invalid sync cycle time" },
+N   {0x0036 , "DC invalid sync0 cycle time" },
+N   {0x0037 , "DC invalid sync1 cycle time" },
+N   {0x0041 , "MBX_AOE" },
+N   {0x0042 , "MBX_EOE" },
+N   {0x0043 , "MBX_COE" },
+N   {0x0044 , "MBX_FOE" },
+N   {0x0045 , "MBX_SOE" },
+N   {0x004F , "MBX_VOE" },
+N   {0x0050 , "EEPROM no access" },
+N   {0x0051 , "EEPROM error" },
+N   {0x0060 , "Slave restarted locally" },
+N   {0x0061 , "Device identification value updated" },
+N   {0x00f0 , "Application controller available" },
+N   {0xffff , "Unknown" }
+N};
+N
+N/** SoE error list definition */
+Nconst ec_soeerrorlist_t ec_soeerrorlist[] = {
+N   {0x0000, "No error" },
+N   {0x1001, "No IDN" },
+N   {0x1009, "Invalid access to element 1" },
+N   {0x2001, "No Name" },
+N   {0x2002, "Name transmission too short" },
+N   {0x2003, "Name transmission too long" },
+N   {0x2004, "Name cannot be changed (read only)" },
+N   {0x2005, "Name is write-protected at this time" },
+N   {0x3002, "Attribute transmission too short" },
+N   {0x3003, "Attribute transmission too long" },
+N   {0x3004, "Attribute cannot be changed (read only)" },
+N   {0x3005, "Attribute is write-protected at this time" },
+N   {0x4001, "No units" },
+N   {0x4002, "Unit transmission too short" },
+N   {0x4003, "Unit transmission too long" },
+N   {0x4004, "Unit cannot be changed (read only)" },
+N   {0x4005, "Unit is write-protected at this time" },
+N   {0x5001, "No minimum input value" },
+N   {0x5002, "Minimum input value transmission too short" },
+N   {0x5003, "Minimum input value transmission too long" },
+N   {0x5004, "Minimum input value cannot be changed (read only)" },
+N   {0x5005, "Minimum input value is write-protected at this time" },
+N   {0x6001, "No maximum input value" },
+N   {0x6002, "Maximum input value transmission too short" },
+N   {0x6003, "Maximum input value transmission too long" },
+N   {0x6004, "Maximum input value cannot be changed (read only)" },
+N   {0x6005, "Maximum input value is write-protected at this time" },
+N   {0x7002, "Operation data transmission too short" },
+N   {0x7003, "Operation data transmission too long" },
+N   {0x7004, "Operation data cannot be changed (read only)" },
+N   {0x7005, "Operation data is write-protected at this time (state)" },
+N   {0x7006, "Operation data is smaller than the minimum input value" },
+N   {0x7007, "Operation data is smaller than the maximum input value" },
+N   {0x7008, "Invalid operation data:Configured IDN will not be supported" },
+N   {0x7009, "Operation data write protected by a password" },
+N   {0x700A, "Operation data is write protected, it is configured cyclically" },
+N   {0x700B, "Invalid indirect addressing: (e.g., data container, list handling)" },
+N   {0x700C, "Operation data is write protected, due to other settings" },
+N   {0x700D, "Reserved" },
+N   {0x7010, "Procedure command already active" },
+N   {0x7011, "Procedure command not interruptible" },
+N   {0x7012, "Procedure command at this time not executable (state)" },
+N   {0x7013, "Procedure command not executable (invalid or false parameters)" },
+N   {0x7014, "No data state" },
+N   {0x8001, "No default value" },
+N   {0x8002, "Default value transmission too long" },
+N   {0x8004, "Default value cannot be changed, read only" },
+N   {0x800A, "Invalid drive number" },
+N   {0x800A, "General error" },
+N   {0x800A, "No element addressed" },
+N   {0xffff, "Unknown" }
+N};
+N
+N/** MBX error list definition */
+Nconst ec_mbxerrorlist_t ec_mbxerrorlist[] = {
+N   {0x0000, "No error" },
+N   {0x0001, "Syntax of 6 octet Mailbox Header is wrong" },
+N   {0x0002, "The mailbox protocol is not supported" },
+N   {0x0003, "Channel Field contains wrong value"},
+N   {0x0004, "The service is no supported"},
+N   {0x0005, "Invalid mailbox header"},
+N   {0x0006, "Length of received mailbox data is too short"},
+N   {0x0007, "No more memory in slave"},
+N   {0x0008, "The lenght of data is inconsistent"},
+N   {0xffff, "Unknown"}
+N};
+N
+N/** Look up text string that belongs to SDO error code.
+N *
+N * @param[in] sdoerrorcode   = SDO error code as defined in EtherCAT protocol
+N * @return readable string
+N */
+Nconst char* ec_sdoerror2string( uint32 sdoerrorcode)
+N{
+N   int i = 0;
+N
+N   while ( (ec_sdoerrorlist[i].errorcode != 0xffffffffUL) &&
+N           (ec_sdoerrorlist[i].errorcode != sdoerrorcode) )
+N   {
+N      i++;
+N   }
+N
+N   return ec_sdoerrorlist[i].errordescription;
+N}
+N
+N/** Look up text string that belongs to AL status code.
+N *
+N * @param[in] ALstatuscode   = AL status code as defined in EtherCAT protocol
+N * @return readable string
+N */
+Nchar* ec_ALstatuscode2string( uint16 ALstatuscode)
+N{
+N   int i = 0;
+N
+N   while ( (ec_ALstatuscodelist[i].ALstatuscode != 0xffff) &&
+N           (ec_ALstatuscodelist[i].ALstatuscode != ALstatuscode) )
+N   {
+N      i++;
+N   }
+N
+N   return (char *) ec_ALstatuscodelist[i].ALstatuscodedescription;
+N}
+N
+N/** Look up text string that belongs to SoE error code.
+N *
+N * @param[in] errorcode   = SoE error code as defined in EtherCAT protocol
+N * @return readable string
+N */
+Nchar* ec_soeerror2string( uint16 errorcode)
+N{
+N   int i = 0;
+N
+N   while ( (ec_soeerrorlist[i].errorcode != 0xffff) &&
+N           (ec_soeerrorlist[i].errorcode != errorcode) )
+N   {
+N      i++;
+N   }
+N
+N   return (char *) ec_soeerrorlist[i].errordescription;
+N}
+N
+N/** Look up text string that belongs to MBX error code.
+N *
+N * @param[in] errorcode   = MBX error code as defined in EtherCAT protocol
+N * @return readable string
+N */
+Nchar* ec_mbxerror2string( uint16 errorcode)
+N{
+N   int i = 0;
+N
+N   while ( (ec_mbxerrorlist[i].errorcode != 0xffff) &&
+N           (ec_mbxerrorlist[i].errorcode != errorcode) )
+N   {
+N      i++;
+N   }
+N
+N   return (char *) ec_mbxerrorlist[i].errordescription;
+N}
+N
+N/** Look up error in ec_errorlist and convert to text string.
+N *
+N * @param[in]  context        = context struct
+N * @return readable string
+N */
+Nchar* ecx_elist2string(ecx_contextt *context)
+N{
+N   ec_errort Ec;
+N   char timestr[20];
+N
+N   if (ecx_poperror(context, &Ec))
+N   {
+N      switch (Ec.Etype)
+N      {
+N         case EC_ERR_TYPE_SDO_ERROR:
+N         {
+N            sprintf(estring, "%s SDO slave:%d index:%4.4x.%2.2x error:%8.8x %s\n",
+N                    timestr, Ec.Slave, Ec.Index, Ec.SubIdx, (unsigned)Ec.AbortCode, ec_sdoerror2string(Ec.AbortCode));
+N            break;
+N         }
+N         case EC_ERR_TYPE_EMERGENCY:
+N         {
+N            sprintf(estring, "%s EMERGENCY slave:%d error:%4.4x\n",
+N                    timestr, Ec.Slave, Ec.ErrorCode);
+N            break;
+N         }
+N         case EC_ERR_TYPE_PACKET_ERROR:
+N         {
+N            sprintf(estring, "%s PACKET slave:%d index:%4.4x.%2.2x error:%d\n",
+N                    timestr, Ec.Slave, Ec.Index, Ec.SubIdx, Ec.ErrorCode);
+N            break;
+N         }
+N         case EC_ERR_TYPE_SDOINFO_ERROR:
+N         {
+N            sprintf(estring, "%s SDO slave:%d index:%4.4x.%2.2x error:%8.8x %s\n",
+N                    timestr, Ec.Slave, Ec.Index, Ec.SubIdx, (unsigned)Ec.AbortCode, ec_sdoerror2string(Ec.AbortCode));
+N            break;
+N         }
+N         case EC_ERR_TYPE_SOE_ERROR:
+N         {
+N            sprintf(estring, "%s SoE slave:%d IDN:%4.4x error:%4.4x %s\n",
+N                    timestr, Ec.Slave, Ec.Index, (unsigned)Ec.AbortCode, ec_soeerror2string(Ec.ErrorCode));
+N            break;
+N         }
+N         case EC_ERR_TYPE_MBX_ERROR:
+N         {
+N            sprintf(estring, "%s MBX slave:%d error:%4.4x %s\n",
+N                    timestr, Ec.Slave, Ec.ErrorCode, ec_mbxerror2string(Ec.ErrorCode));
+N            break;
+N         }
+N         default:
+N         {
+N            sprintf(estring, "%s error:%8.8x\n",
+N                    timestr, (unsigned)Ec.AbortCode);
+N            break;
+N         }
+N      }
+N      return (char*) estring;
+N   }
+N   else
+N   {
+N      return "";
+N   }
+N}
+N
+N#ifdef EC_VER1
+Nchar* ec_elist2string(void)
+N{
+N   return ecx_elist2string(&ecx_context);
+N}
+N#endif
